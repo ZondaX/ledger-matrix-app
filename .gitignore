@@ -40,5 +40,7 @@ cmake-build-debug/
 \.idea/
 
 src/glyphs\.h
-
 src/glyphs\.c
+obj/
+bin/
+debug/
