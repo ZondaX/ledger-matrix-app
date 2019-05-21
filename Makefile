@@ -22,7 +22,7 @@ endif
 include $(BOLOS_SDK)/Makefile.defines
 
 # Main app configuration
-APPNAME = "Matrix"
+APPNAME = "MatrixAI"
 APPVERSION_M=0
 APPVERSION_N=0
 APPVERSION_P=1
@@ -144,4 +144,4 @@ include $(BOLOS_SDK)/Makefile.rules
 dep/%.d: %.c Makefile
 
 listvariants:
-	@echo VARIANTS COIN matrix
+	@echo VARIANTS COIN matrixai
