@@ -1,6 +1,6 @@
 /*******************************************************************************
 *   (c) 2016 Ledger
-*   (c) 2018 ZondaX GmbH
+*   (c) 2019 ZondaX GmbH
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -154,6 +154,18 @@ void handleApdu(volatile uint32_t *flags, volatile uint32_t *tx, uint32_t rx) {
                     *tx = 0;
                     *tx += 65;  // PubKey
                     *tx += 33;  // MAN address
+                    THROW(APDU_CODE_OK);
+                    break;
+                }
+
+                case INS_SIGN_SECP256K1: {
+                    // TODO: handle packages
+                    // TODO: check derivation path
+                    // TODO: check payload type
+                    // TODO: get all packets
+                    // TODO: parse tx
+                    // TODO: review tx
+                    // TODO: sign tx
                     THROW(APDU_CODE_OK);
                     break;
                 }
