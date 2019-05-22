@@ -63,38 +63,34 @@ The general structure of commands and responses is as follows:
 
 --------------
 
-### INS_GET_ADDR_SECP256K1
+### INS_GETADDR_SECP256K1
 
 #### Command
 
 | Field      | Type           | Content                | Expected       |
 | ---------- | -------------- | ---------------------- | -------------- |
 | CLA        | byte (1)       | Application Identifier | 0x88           |
-| INS        | byte (1)       | Instruction ID         | 0x04           |
-| P1         | byte (1)       | Parameter 1            | ignored        |
+| INS        | byte (1)       | Instruction ID         | 0x01           |
+| P1         | byte (1)       | Request User confirmation | No = 0      |
 | P2         | byte (1)       | Parameter 2            | ignored        |
 | L          | byte (1)       | Bytes in payload       | (depends)      |
-| HRP_LEN    | byte(1)        | Bech32 HRP Length      | 1<=HRP_LEN<=83 |
-| HRP        | byte (HRP_LEN) | Bech32 HRP             |                |
-| PL         | byte (1)       | Derivation Path Length | 3<=PL<=10      |
 | Path[0]    | byte (4)       | Derivation Path Data   | 44             |
-| Path[1]    | byte (4)       | Derivation Path Data   | 118            |
-| ..         | byte (4)       | Derivation Path Data   |                |
-| Path[PL-1] | byte (4)       | Derivation Path Data   |                |
-
-First three items in the derivation path will be hardened automatically hardened
+| Path[1]    | byte (4)       | Derivation Path Data   | 318            |
+| Path[2]    | byte (4)       | Derivation Path Data   | ??             |
+| Path[3]    | byte (4)       | Derivation Path Data   | ??             |
+| Path[4]    | byte (4)       | Derivation Path Data   | ??             |
 
 #### Response
 
 | Field   | Type      | Content               | Note                     |
 | ------- | --------- | --------------------- | ------------------------ |
-| PK      | byte (33) | Compressed Public Key |                          |
-| ADDR    | byte (65) | Bech 32 addr          |                          |
+| PK      | byte (65) | Uncompressed Public Key |                          |
+| ADDR    | byte (33) | MAN address           |                          |
 | SW1-SW2 | byte (2)  | Return code           | see list of return codes |
 
 --------------
 
-### SIGN_SECP256K1
+### INS_SIGN_SECP256K1
 
 #### Command
 
@@ -107,7 +103,7 @@ First three items in the derivation path will be hardened automatically hardened
 |       |
 | L     | byte (1) | Bytes in payload       | (depends) |
 
-The first packet/chunk includes only the derivation path
+The first packet/chunk includes parameters
 
 All other packets/chunks should contain message to sign 
 
@@ -115,18 +111,19 @@ All other packets/chunks should contain message to sign
 
 | Field      | Type     | Content                | Expected  |
 | ---------- | -------- | ---------------------- | --------- |
-| PL         | byte (1) | Derivation Path Length | 3<=PL<=10 |
 | Path[0]    | byte (4) | Derivation Path Data   | 44        |
-| Path[1]    | byte (4) | Derivation Path Data   | 118       |
-| ..         | byte (4) | Derivation Path Data   |           |
-| Path[PL-1] | byte (4) | Derivation Path Data   |           |
-| Message    | bytes... | Message to Sign        |           |
+| Path[1]    | byte (4) | Derivation Path Data   | 318       |
+| Path[2]    | byte (4) | Derivation Path Data   | ?         |
+| Path[3]    | byte (4) | Derivation Path Data   | ?         |
+| Path[4]    | byte (4) | Derivation Path Data   | ?         |
+| Format     | byte (1) | Payload Format         | JSON=0    |
+|            |          |                        | BINARY=1  |
 
 *Other Chunks/Packets*
 
 | Field   | Type     | Content         | Expected |
 | ------- | -------- | --------------- | -------- |
-| Message | bytes... | Message to Sign |          |
+| Payload Chunk | bytes... | Payload to Sign |          |
 
 #### Response
 

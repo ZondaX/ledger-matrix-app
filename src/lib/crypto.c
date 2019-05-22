@@ -36,7 +36,7 @@ const uint8_t crc8_poly7[] = {
         26, 29, 20, 19, 174, 169, 160, 167, 178, 181, 188, 187, 150, 145, 152, 159, 138, 141, 132, 131, 222, 217, 208,
         215, 194, 197, 204, 203, 230, 225, 232, 239, 250, 253, 244, 243};
 
-uint8_t crc8(uint8_t *data, size_t data_len) {
+uint8_t crc8(const uint8_t *data, size_t data_len) {
     uint8_t crc = crc8_init;
     for (size_t i = 0; i < data_len; i++) {
         crc = crc8_poly7[crc ^ data[i]];

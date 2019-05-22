@@ -85,6 +85,21 @@ unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len) {
     return 0;
 }
 
+uint32_t bip44_path[5];
+
+void extractBip44(uint32_t rx, uint32_t offset) {
+    if ((rx - offset) < 20) {
+        THROW(APDU_CODE_DATA_INVALID);
+    }
+    memcpy(bip44_path, G_io_apdu_buffer + offset, 20);
+
+    // Check values
+    if (bip44_path[0] != 0x8000002c ||
+        bip44_path[0] != 0x8000013e) {
+        THROW(APDU_CODE_DATA_INVALID);
+    }
+}
+
 void handleApdu(volatile uint32_t *flags, volatile uint32_t *tx, uint32_t rx) {
     uint16_t sw = 0;
 
@@ -110,10 +125,23 @@ void handleApdu(volatile uint32_t *flags, volatile uint32_t *tx, uint32_t rx) {
                     G_io_apdu_buffer[1] = LEDGER_MAJOR_VERSION;
                     G_io_apdu_buffer[2] = LEDGER_MINOR_VERSION;
                     G_io_apdu_buffer[3] = LEDGER_PATCH_VERSION;
-                    G_io_apdu_buffer[4] = 0 /*!IS_UX_ALLOWED*/;
+                    G_io_apdu_buffer[4] = !IS_UX_ALLOWED;
 
                     *tx += 5;
                     THROW(APDU_CODE_OK);
+                    break;
+                }
+
+                case INS_GETADDR_SECP256K1: {
+                    extractBip44(rx, 0);
+
+                    // TODO: Two paths.. confirmation required or just answer?
+//                    view_set_handlers(addr_getData, addr_accept, addr_reject);
+//                    view_addr_confirm(0);
+//                    *flags |= IO_ASYNCH_REPLY;
+
+                    THROW(APDU_CODE_OK);
+
                     break;
                 }
 
