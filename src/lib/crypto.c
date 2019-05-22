@@ -14,8 +14,11 @@
 *  limitations under the License.
 ********************************************************************************/
 
-#include <zxmacros.h>
 #include "crypto.h"
+
+#if defined(TARGET_NANOS) || defined(TARGET_NANOX)
+#include "cx.h"
+#endif
 
 // automatically generated LUT
 // from https://github.com/MatrixAINetwork/go-matrix/blob/6b61d8dbb8dfde44e896d359b17377d1a60f44db/crc8/crc8.go#L26
@@ -44,8 +47,25 @@ uint8_t crc8(const uint8_t *data, size_t data_len) {
     return crc ^ crc8_xor_out;
 }
 
-#if defined(TARGET_NANO_S) || defined(TARGET_NANO_X)
+#if defined(TARGET_NANOS) || defined(TARGET_NANOX)
 void keccak(uint8_t *out, size_t out_len, uint8_t *in, size_t in_len){
+    cx_sha3_t sha3;
+    cx_keccak_init(&sha3, 256);
+    cx_hash((cx_hash_t*)&sha3, CX_LAST, in, in_len, out, out_len);
+}
+
+void extractPublicKey(uint32_t bip44Path[5], uint8_t *pubKey) {
+    cx_ecfp_public_key_t publicKey;
+    cx_ecfp_private_key_t privateKey;
+    uint8_t privateKeyData[32];
+
+    os_perso_derive_node_bip32(CX_CURVE_256K1, bip44Path, 5, privateKeyData, 0);
+    cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
+    cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKey, &privateKey, 1);
+    os_memset(&privateKey, 0, sizeof(privateKey));
+    os_memset(privateKeyData, 0, sizeof(privateKeyData));
+
+    MEMCPY(pubKey, publicKey.W, 65);
 }
 #endif
 

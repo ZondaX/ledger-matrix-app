@@ -17,6 +17,7 @@
 #pragma once
 
 #include "base58.h"
+#include <zxmacros.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,6 +30,11 @@ void ethAddressFromPubKey(uint8_t *ethAddress, uint8_t *pubkey);
 uint8_t manAddressFromEthAddr(char *manAddress, uint8_t *ethAddress);
 
 void keccak(uint8_t *out, size_t out_len, uint8_t *in, size_t in_len);
+
+#if defined(TARGET_NANOS) || defined(TARGET_NANOX)
+void extractPublicKey(uint32_t bip44Path[5], uint8_t *pubKey);
+#endif
+
 
 #ifdef __cplusplus
 }

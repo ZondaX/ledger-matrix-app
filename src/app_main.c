@@ -22,6 +22,7 @@
 #include <os.h>
 #include "zxmacros.h"
 #include "view.h"
+#include "lib/crypto.h"
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
@@ -85,17 +86,17 @@ unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len) {
     return 0;
 }
 
-uint32_t bip44_path[5];
+uint32_t bip44Path[5];
 
 void extractBip44(uint32_t rx, uint32_t offset) {
     if ((rx - offset) < 20) {
         THROW(APDU_CODE_DATA_INVALID);
     }
-    memcpy(bip44_path, G_io_apdu_buffer + offset, 20);
+    memcpy(bip44Path, G_io_apdu_buffer + offset, 20);
 
     // Check values
-    if (bip44_path[0] != 0x8000002c ||
-        bip44_path[0] != 0x8000013e) {
+    if (bip44Path[0] != 0x8000002c ||
+        bip44Path[0] != 0x8000013e) {
         THROW(APDU_CODE_DATA_INVALID);
     }
 }
@@ -133,15 +134,27 @@ void handleApdu(volatile uint32_t *flags, volatile uint32_t *tx, uint32_t rx) {
                 }
 
                 case INS_GETADDR_SECP256K1: {
-                    extractBip44(rx, 0);
+                    extractBip44(rx, OFFSET_DATA);
+                    uint8_t requireConfirmation = G_io_apdu_buffer[OFFSET_P1];
 
-                    // TODO: Two paths.. confirmation required or just answer?
-//                    view_set_handlers(addr_getData, addr_accept, addr_reject);
-//                    view_addr_confirm(0);
-//                    *flags |= IO_ASYNCH_REPLY;
+                    // Put data directly in the apdu buffer
+                    uint8_t *const pubKey = G_io_apdu_buffer;
+                    char *const manAddress = (char *) (G_io_apdu_buffer + 65);
+                    uint8_t ethAddress[20];
 
+                    // extract pubkey and generate a MAN address
+                    extractPublicKey(bip44Path, pubKey);
+                    ethAddressFromPubKey(ethAddress, pubKey + 1);
+                    manAddressFromEthAddr(manAddress, ethAddress);
+
+                    if (requireConfirmation) {
+                        // TODO: confirmation required
+                    }
+
+                    *tx = 0;
+                    *tx += 65;  // PubKey
+                    *tx += 33;  // MAN address
                     THROW(APDU_CODE_OK);
-
                     break;
                 }
 

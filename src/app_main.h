@@ -23,10 +23,13 @@
 
 #define OFFSET_CLA                      0
 #define OFFSET_INS                      1  //< Instruction offset
-#define OFFSET_PCK_INDEX                2  //< Package index offset
-#define OFFSET_PCK_COUNT                3  //< Package count offset
+#define OFFSET_P1                       2  //< P1
+#define OFFSET_P2                       3  //< P2
 #define OFFSET_DATA_LEN                 4  //< Data Length
 #define OFFSET_DATA                     5  //< Data offset
+
+#define OFFSET_PCK_INDEX                OFFSET_P1  //< Package index offset
+#define OFFSET_PCK_COUNT                OFFSET_P2  //< Package count offset
 
 #define INS_GET_VERSION                 0
 #define INS_GETADDR_SECP256K1           1
