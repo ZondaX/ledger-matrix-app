@@ -92,11 +92,12 @@ void extractBip44(uint32_t rx, uint32_t offset) {
     if ((rx - offset) < 20) {
         THROW(APDU_CODE_DATA_INVALID);
     }
+
     memcpy(bip44Path, G_io_apdu_buffer + offset, 20);
 
     // Check values
     if (bip44Path[0] != 0x8000002c ||
-        bip44Path[0] != 0x8000013e) {
+        bip44Path[1] != 0x8000013e) {
         THROW(APDU_CODE_DATA_INVALID);
     }
 }
