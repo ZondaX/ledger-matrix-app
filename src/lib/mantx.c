@@ -16,6 +16,7 @@
 
 #include "mantx.h"
 #include "rlp.h"
+#include "uint256.h"
 
 int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
     uint16_t fieldCount;
@@ -33,53 +34,89 @@ int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
     if (err != MANTX_NO_ERROR)
         return err;
 
+    ctx->rootData = data + ctx->root.fieldOffset + ctx->root.valueOffset;
+
     if (fieldCount != 13)
         return MANTX_ERROR_UNEXPECTED_FIELD_COUNT;
 
     return MANTX_NO_ERROR;
 }
 
-int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx) {
+int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *out, uint16_t outLen) {
 //01 {name: 'nonce', length: 32, allowLess: true, index: 0, default: <Buffer>},
 //02 {name: 'gasPrice',length: 32,allowLess: true,index: 1,default: <Buffer>},
 //03 {name: 'gasLimit',alias: 'gas',length: 32,allowLess: true,index: 2,default: <Buffer>},
 //04 {name: 'to', allowZero: true, index: 3, default: '' },
 //05 {name: 'value',length: 32,allowLess: true,index: 4,default: <Buffer>},
 //06 {name: 'data',alias: 'input',allowZero: true,index: 5,default: <Buffer>},
+
 //07 {name: 'v', allowZero: true, index: 6, default: <Buffer 1c> },
 //08 {name: 'r',length: 32,allowZero: true,allowLess: true,index: 7,default: <Buffer>},
 //09 {name: 's',length: 32,allowZero: true,allowLess: true,index: 8,default: <Buffer>},
+
 //10 {name: 'TxEnterType',allowZero: true,allowLess: true,index: 9,default: <Buffer>},
 //11 {name: 'IsEntrustTx',allowZero: true,allowLess: true,index: 10,default: <Buffer>},
 //12 {name: 'CommitTime',allowZero: true,allowLess: true,index: 11,default: <Buffer>},
 //13 {name: 'extra_to',allowZero: true,allowLess: true,index: 12,default: <Buffer>}
 
+    const rlp_field_t *f = ctx->fields + fieldIdx;
+    const uint8_t *d = ctx->rootData;
+
+    uint256_t tmp;
+
     switch (fieldIdx) {
-        case MANTX_FIELD_NONCE:
+        case MANTX_FIELD_NONCE: {
+            rlp_readUInt256(d, f, &tmp);
+            tostring256(&tmp, 10, out, outLen);
             break;
-        case MANTX_FIELD_GASPRICE:
+        }
+        case MANTX_FIELD_GASPRICE: {
+            rlp_readUInt256(d, f, &tmp);
+            tostring256(&tmp, 10, out, outLen);
             break;
-        case MANTX_FIELD_GASLIMIT:
+        }
+        case MANTX_FIELD_GASLIMIT: {
+            rlp_readUInt256(d, f, &tmp);
+            tostring256(&tmp, 10, out, outLen);
             break;
-        case MANTX_FIELD_TO:
+        }
+        case MANTX_FIELD_TO: {
             break;
-        case MANTX_FIELD_VALUE:
+        }
+        case MANTX_FIELD_VALUE: {
+            rlp_readUInt256(d, f, &tmp);
+            tostring256(&tmp, 10, out, outLen);
             break;
-        case MANTX_FIELD_DATA:
+        }
+        case MANTX_FIELD_DATA: {
             break;
-        case MANTX_FIELD_V:
+        }
+        case MANTX_FIELD_V: {
+            // TODO fix chain id
+            rlp_readUInt256(d, f, &tmp);
+            tostring256(&tmp, 10, out, outLen);
             break;
+        }
         case MANTX_FIELD_R:
+            // empty response
+            out[0] = 0;
             break;
         case MANTX_FIELD_S:
+            // empty response
+            out[0] = 0;
             break;
+
         case MANTX_FIELD_ENTERTYPE:
             break;
         case MANTX_FIELD_ISENTRUSTTX:
             break;
-        case MANTX_FIELD_COMMITTIME:
+        case MANTX_FIELD_COMMITTIME: {
+            rlp_readUInt256(d, f, &tmp);
+            tostring256(&tmp, 10, out, outLen);
             break;
+        }
         case MANTX_FIELD_EXTRATO:
+            // TODO: This will be a list
             break;
         default:
             return MANTX_ERROR_UNEXPECTED_FIELD;

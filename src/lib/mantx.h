@@ -45,6 +45,7 @@ extern "C" {
 
 typedef struct {
     rlp_field_t root;
+    uint8_t *rootData;
     rlp_field_t fields[13];
 } mantx_context_t;
 
@@ -52,7 +53,7 @@ typedef struct {
 int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen);
 
 // get a readable output for each field
-int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx);
+int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *out, uint16_t outLen);
 
 #ifdef __cplusplus
 }

@@ -15,11 +15,13 @@
 ********************************************************************************/
 
 #include "rlp.h"
+#include "uint256.h"
 
-int16_t rlp_decode(const uint8_t *data,
-                   uint8_t *kind,
-                   uint16_t *len,
-                   uint16_t *dataOffset) {
+int16_t rlp_decode(
+        const uint8_t *data,
+        uint8_t *kind,
+        uint16_t *len,
+        uint16_t *dataOffset) {
 
     // TODO: Do not allow uint64 lengths
 
@@ -83,10 +85,11 @@ int8_t rlp_parseStream(const uint8_t *data,
 
     while (offset < dataLen && *fieldCount < maxFieldCount) {
         int16_t bytesConsumed = rlp_decode(
-            data + offset,
-            &fields[*fieldCount].kind,
-            &fields[*fieldCount].valueLen,
-            &fields[*fieldCount].valueOffset);
+                data + offset,
+                &fields[*fieldCount].kind,
+                &fields[*fieldCount].valueLen,
+                &fields[*fieldCount].valueOffset);
+        fields[*fieldCount].fieldOffset = offset;
 
         if (bytesConsumed < 0) {
             return bytesConsumed;   // as error
@@ -114,20 +117,19 @@ int8_t rlp_readByte(const uint8_t *data, rlp_field_t *field, uint8_t *value) {
     return RLP_NO_ERROR;
 }
 
-int8_t rlp_readString(const uint8_t *data, rlp_field_t *field, uint8_t *value, uint16_t maxLen) {
+int8_t rlp_readString(const uint8_t *data, const rlp_field_t *field, uint8_t *value, uint16_t maxLen) {
     if (field->kind != RLP_KIND_STRING)
         return RLP_ERROR_INVALID_KIND;
 
-    if (field->valueLen >= maxLen)
+    if (field->valueLen > maxLen)
         return RLP_ERROR_BUFFER_TOO_SMALL;
 
     MEMCPY(value, data + field->fieldOffset + field->valueOffset, field->valueLen);
-    value[field->valueLen] = 0; // Zero terminate
     return RLP_NO_ERROR;
 }
 
 int8_t rlp_readList(const uint8_t *data,
-                    rlp_field_t *field,
+                    const rlp_field_t *field,
                     rlp_field_t *listFields,
                     uint8_t maxListFieldCount,
                     uint16_t *listFieldCount) {
@@ -139,4 +141,20 @@ int8_t rlp_readList(const uint8_t *data,
                            listFields,
                            maxListFieldCount,
                            listFieldCount);
+}
+
+int8_t rlp_readUInt256(const uint8_t *data,
+                       const rlp_field_t *field,
+                       uint256_t *value) {
+    if (field->kind != RLP_KIND_STRING)
+        return RLP_ERROR_INVALID_KIND;
+
+    uint8_t tmpBuffer[32];
+
+    MEMSET(tmpBuffer, 0, 32);
+    MEMMOVE(tmpBuffer - field->valueLen + 32,
+            data + field->valueOffset + field->fieldOffset,
+            field->valueLen);
+
+    readu256BE(tmpBuffer, value);
 }

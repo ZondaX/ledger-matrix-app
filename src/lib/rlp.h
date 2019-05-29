@@ -17,6 +17,7 @@
 #pragma once
 
 #include <zxmacros.h>
+#include "uint256.h"
 
 #define RLP_KIND_BYTE       0
 #define RLP_KIND_STRING     1
@@ -39,7 +40,10 @@ typedef struct {
     uint16_t valueLen;
 } rlp_field_t;
 
-int16_t rlp_decode(const uint8_t *data, uint8_t *kind, uint16_t *len, uint16_t *dataOffset);
+int16_t rlp_decode(const uint8_t *data,
+                   uint8_t *kind,
+                   uint16_t *len,
+                   uint16_t *dataOffset);
 
 // parses and splits the buffer into fields
 int8_t rlp_parseStream(const uint8_t *data,
@@ -53,18 +57,23 @@ int8_t rlp_readByte(const uint8_t *data,
                     rlp_field_t *field,
                     uint8_t *value);
 
-// reads a string into value, it will zero terminate so maxLen is expected to be larger than the actual data
+// reads a buffer into value. These are not actually zero terminate strings but buffers
 int8_t rlp_readString(const uint8_t *data,
-                      rlp_field_t *field,
+                      const rlp_field_t *field,
                       uint8_t *value,
                       uint16_t maxLen);
 
 // reads a list and splits into fields
 int8_t rlp_readList(const uint8_t *data,
-                    rlp_field_t *field,
+                    const rlp_field_t *field,
                     rlp_field_t *listFields,
                     uint8_t maxListFieldCount,
                     uint16_t *listFieldCount);
+
+// reads a variable uint256
+int8_t rlp_readUInt256(const uint8_t *data,
+                       const rlp_field_t *field,
+                       uint256_t *value);
 
 #ifdef __cplusplus
 }
