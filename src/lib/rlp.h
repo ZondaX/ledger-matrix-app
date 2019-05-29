@@ -75,6 +75,11 @@ int8_t rlp_readUInt256(const uint8_t *data,
                        const rlp_field_t *field,
                        uint256_t *value);
 
+// reads a variable uint256
+int8_t rlp_readUInt256(const uint8_t *data,
+                       const rlp_field_t *field,
+                       uint256_t *value);
+
 #ifdef __cplusplus
 }
 #endif

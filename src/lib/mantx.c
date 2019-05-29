@@ -18,6 +18,41 @@
 #include "rlp.h"
 #include "uint256.h"
 
+#include <stdio.h>
+#include <time.h>
+
+const char *fieldNames[] = {
+    "Nonce",
+    "Gas Price",
+    "Gas Limit",
+    "To",
+    "Value",
+    "Data",
+    "ChainID",  // According to EIP155
+    "R",
+    "S",
+    "EnterType",
+    "IsEntrustTx",
+    "CommitTime",
+    "ExtraTo"
+};
+
+const uint8_t displayIdxs[] = {
+    MANTX_FIELD_NONCE,
+    MANTX_FIELD_GASPRICE,
+    MANTX_FIELD_GASLIMIT,
+    MANTX_FIELD_TO,
+    MANTX_FIELD_VALUE,
+    MANTX_FIELD_DATA,
+    MANTX_FIELD_V,
+    //MANTX_FIELD_R,        // Do not show according to EIP155
+    //MANTX_FIELD_S,
+    MANTX_FIELD_ENTERTYPE,
+    MANTX_FIELD_ISENTRUSTTX,
+    MANTX_FIELD_COMMITTIME,
+    MANTX_FIELD_EXTRATO
+};
+
 int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
     uint16_t fieldCount;
 
@@ -42,25 +77,17 @@ int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
     return MANTX_NO_ERROR;
 }
 
+const char *maxtx_getFieldName(uint8_t fieldIdx) {
+    if (fieldIdx > 13)
+        return "? Unknown";
+    return fieldNames[fieldIdx];
+}
+
 int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *out, uint16_t outLen) {
-//01 {name: 'nonce', length: 32, allowLess: true, index: 0, default: <Buffer>},
-//02 {name: 'gasPrice',length: 32,allowLess: true,index: 1,default: <Buffer>},
-//03 {name: 'gasLimit',alias: 'gas',length: 32,allowLess: true,index: 2,default: <Buffer>},
-//04 {name: 'to', allowZero: true, index: 3, default: '' },
-//05 {name: 'value',length: 32,allowLess: true,index: 4,default: <Buffer>},
-//06 {name: 'data',alias: 'input',allowZero: true,index: 5,default: <Buffer>},
-
-//07 {name: 'v', allowZero: true, index: 6, default: <Buffer 1c> },
-//08 {name: 'r',length: 32,allowZero: true,allowLess: true,index: 7,default: <Buffer>},
-//09 {name: 's',length: 32,allowZero: true,allowLess: true,index: 8,default: <Buffer>},
-
-//10 {name: 'TxEnterType',allowZero: true,allowLess: true,index: 9,default: <Buffer>},
-//11 {name: 'IsEntrustTx',allowZero: true,allowLess: true,index: 10,default: <Buffer>},
-//12 {name: 'CommitTime',allowZero: true,allowLess: true,index: 11,default: <Buffer>},
-//13 {name: 'extra_to',allowZero: true,allowLess: true,index: 12,default: <Buffer>}
-
     const rlp_field_t *f = ctx->fields + fieldIdx;
     const uint8_t *d = ctx->rootData;
+
+    MEMSET(out, 0, outLen);
 
     uint256_t tmp;
 
@@ -81,6 +108,7 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *
             break;
         }
         case MANTX_FIELD_TO: {
+            rlp_readString(data, f, out, outLen);
             break;
         }
         case MANTX_FIELD_VALUE: {
@@ -89,6 +117,7 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *
             break;
         }
         case MANTX_FIELD_DATA: {
+            rlp_readString(data, f, out, outLen);
             break;
         }
         case MANTX_FIELD_V: {
@@ -105,14 +134,24 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *
             // empty response
             out[0] = 0;
             break;
-
         case MANTX_FIELD_ENTERTYPE:
             break;
         case MANTX_FIELD_ISENTRUSTTX:
             break;
         case MANTX_FIELD_COMMITTIME: {
             rlp_readUInt256(d, f, &tmp);
-            tostring256(&tmp, 10, out, outLen);
+
+            // this should be limited to uint64_t
+            if (tmp.elements[0].elements[0] != 0 ||
+                tmp.elements[0].elements[1] != 0 ||
+                tmp.elements[1].elements[0] != 0) {
+                return MANTX_ERROR_INVALID_TIME;
+            }
+
+            time_t t = tmp.elements[1].elements[1] / 1000;
+            struct tm * ptm = gmtime(&t);
+
+            strftime(out, outLen, "%d%b%Y %T", ptm);
             break;
         }
         case MANTX_FIELD_EXTRATO:
@@ -121,5 +160,25 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *
         default:
             return MANTX_ERROR_UNEXPECTED_FIELD;
     }
+    return MANTX_NO_ERROR;
+}
+
+int8_t mantx_getItem(
+    mantx_context_t *ctx, uint8_t *data, uint8_t displayIdx,
+    char *outKey, uint16_t outKeyLen,
+    char *outValue, uint16_t outValueLen) {
+
+    if (displayIdx > sizeof(displayIdxs))
+        return MANTX_ERROR_UNEXPECTED_DISPLAY_IDX;
+
+    // TODO: Check displayIdx ranges
+    uint8_t fieldIdx = displayIdxs[displayIdx];
+
+    snprintf(outKey, outKeyLen, "%s", maxtx_getFieldName(fieldIdx));
+
+    if (mantx_print(ctx, data, fieldIdx, outValue, outValueLen) != MANTX_NO_ERROR) {
+
+    }
+
     return MANTX_NO_ERROR;
 }

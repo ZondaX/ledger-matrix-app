@@ -26,6 +26,8 @@ extern "C" {
 #define MANTX_ERROR_UNEXPECTED_ROOT -1
 #define MANTX_ERROR_UNEXPECTED_FIELD_COUNT -2
 #define MANTX_ERROR_UNEXPECTED_FIELD -3
+#define MANTX_ERROR_UNEXPECTED_DISPLAY_IDX -4
+#define MANTX_ERROR_INVALID_TIME -5
 
 #define MANTX_FIELD_NONCE        0
 #define MANTX_FIELD_GASPRICE     1
@@ -52,9 +54,14 @@ typedef struct {
 // parse and check a tx buffer
 int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen);
 
+const char *maxtx_getFieldName(uint8_t fieldIdx);
+
 // get a readable output for each field
 int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *out, uint16_t outLen);
 
+int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data, uint8_t displayIdx,
+                     char *outKey, uint16_t outKeyLen,
+                     char *outValue, uint16_t outValueLen);
 #ifdef __cplusplus
 }
 #endif
