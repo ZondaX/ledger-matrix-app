@@ -109,7 +109,7 @@ int8_t rlp_readByte(const uint8_t *data, rlp_field_t *field, uint8_t *value) {
     if (field->valueLen != 0)
         return RLP_ERROR_INVALID_VALUE_LEN;
 
-    if (field->fieldOffset != 0)
+    if (field->valueOffset != 0)
         return RLP_ERROR_INVALID_FIELD_OFFSET;
 
     *value = *(data + field->fieldOffset + field->valueOffset);

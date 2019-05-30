@@ -108,7 +108,7 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *
             break;
         }
         case MANTX_FIELD_TO: {
-            rlp_readString(data, f, out, outLen);
+            rlp_readString(d, f, out, outLen);
             break;
         }
         case MANTX_FIELD_VALUE: {
@@ -117,13 +117,14 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *
             break;
         }
         case MANTX_FIELD_DATA: {
-            rlp_readString(data, f, out, outLen);
+            rlp_readString(d, f, out, outLen);
             break;
         }
         case MANTX_FIELD_V: {
             // TODO fix chain id
-            rlp_readUInt256(d, f, &tmp);
-            tostring256(&tmp, 10, out, outLen);
+            uint8_t tmpByte;
+            rlp_readByte(d, f, &tmpByte);
+            snprintf(out, outLen, "%d", tmpByte);
             break;
         }
         case MANTX_FIELD_R:
@@ -135,8 +136,12 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *
             out[0] = 0;
             break;
         case MANTX_FIELD_ENTERTYPE:
+            rlp_readUInt256(d, f, &tmp);
+            tostring256(&tmp, 10, out, outLen);
             break;
         case MANTX_FIELD_ISENTRUSTTX:
+            rlp_readUInt256(d, f, &tmp);
+            tostring256(&tmp, 10, out, outLen);
             break;
         case MANTX_FIELD_COMMITTIME: {
             rlp_readUInt256(d, f, &tmp);
