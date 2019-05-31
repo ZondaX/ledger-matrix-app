@@ -45,10 +45,23 @@ extern "C" {
 #define MANTX_FIELD_COMMITTIME   11
 #define MANTX_FIELD_EXTRATO      12
 
+#define MANTX_ROOTFIELD_COUNT 13
+#define MANTX_EXTRATOFIELD_COUNT 1
+#define MANTX_EXTRATO2FIELD_COUNT 3
+#define MANTX_DISPLAY_COUNT 11
+
 typedef struct {
     rlp_field_t root;
+
     uint8_t *rootData;
-    rlp_field_t fields[13];
+    rlp_field_t rootFields[MANTX_ROOTFIELD_COUNT];
+
+    uint8_t *extraToData;
+    rlp_field_t extraToFields[MANTX_EXTRATOFIELD_COUNT];
+
+    uint8_t *extraToData2;
+    rlp_field_t extraToFields2[MANTX_EXTRATOFIELD_COUNT];
+
 } mantx_context_t;
 
 // parse and check a tx buffer

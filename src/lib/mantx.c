@@ -56,35 +56,49 @@ const uint8_t displayIdxs[] = {
 int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
     uint16_t fieldCount;
 
+    // we expect a single root list
     int8_t err = rlp_parseStream(data, dataLen, &ctx->root, 1, &fieldCount);
     if (err != MANTX_NO_ERROR)
         return err;
-
-    // we expect a single list
     if (ctx->root.kind != RLP_KIND_LIST)
         return MANTX_ERROR_UNEXPECTED_ROOT;
 
-    // now we can extract all fields in that list
-    err = rlp_readList(data, &ctx->root, ctx->fields, 13, &fieldCount);
+    // now we can extract all rootFields in that list
+    err = rlp_readList(data, &ctx->root, ctx->rootFields, MANTX_ROOTFIELD_COUNT, &fieldCount);
     if (err != MANTX_NO_ERROR)
         return err;
-
+    if (fieldCount != MANTX_ROOTFIELD_COUNT)
+        return MANTX_ERROR_UNEXPECTED_FIELD_COUNT;
     ctx->rootData = data + ctx->root.fieldOffset + ctx->root.valueOffset;
 
-    if (fieldCount != 13)
+    // Now parse the extraTo field
+    const rlp_field_t *extraToField = &ctx->rootFields[MANTX_FIELD_EXTRATO];
+    err = rlp_readList(ctx->rootData, extraToField, ctx->extraToFields, MANTX_EXTRATOFIELD_COUNT, &fieldCount);
+    if (err != MANTX_NO_ERROR)
+        return err;
+    if (fieldCount != MANTX_EXTRATOFIELD_COUNT)
+        return MANTX_ERROR_UNEXPECTED_FIELD_COUNT;
+    ctx->extraToData = ctx->rootData + ctx->extraToFields[0].fieldOffset + ctx->extraToFields[0].valueOffset;
+
+    // Now parse the extraTo2 field
+    const rlp_field_t *extraToField2 = &ctx->extraToFields[0];
+    err = rlp_readList(ctx->extraToData, extraToField2, ctx->extraToFields2, MANTX_EXTRATO2FIELD_COUNT, &fieldCount);
+    if (err != MANTX_NO_ERROR)
+        return err;
+    if (fieldCount != MANTX_EXTRATO2FIELD_COUNT)
         return MANTX_ERROR_UNEXPECTED_FIELD_COUNT;
 
     return MANTX_NO_ERROR;
 }
 
 const char *maxtx_getFieldName(uint8_t fieldIdx) {
-    if (fieldIdx > 13)
+    if (fieldIdx > MANTX_ROOTFIELD_COUNT)
         return "? Unknown";
     return fieldNames[fieldIdx];
 }
 
 int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *out, uint16_t outLen) {
-    const rlp_field_t *f = ctx->fields + fieldIdx;
+    const rlp_field_t *f = ctx->rootFields + fieldIdx;
     const uint8_t *d = ctx->rootData;
 
     MEMSET(out, 0, outLen);
@@ -154,12 +168,13 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *
             }
 
             time_t t = tmp.elements[1].elements[1] / 1000;
-            struct tm * ptm = gmtime(&t);
+            struct tm *ptm = gmtime(&t);
 
             strftime(out, outLen, "%d%b%Y %T", ptm);
             break;
         }
         case MANTX_FIELD_EXTRATO:
+            snprintf(out, outLen, "???");
             // TODO: This will be a list
             break;
         default:
@@ -173,7 +188,7 @@ int8_t mantx_getItem(
     char *outKey, uint16_t outKeyLen,
     char *outValue, uint16_t outValueLen) {
 
-    if (displayIdx > sizeof(displayIdxs))
+    if (displayIdx >= MANTX_DISPLAY_COUNT)
         return MANTX_ERROR_UNEXPECTED_DISPLAY_IDX;
 
     // TODO: Check displayIdx ranges

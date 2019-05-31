@@ -102,7 +102,7 @@ int8_t rlp_parseStream(const uint8_t *data,
     return RLP_NO_ERROR;
 }
 
-int8_t rlp_readByte(const uint8_t *data, rlp_field_t *field, uint8_t *value) {
+int8_t rlp_readByte(const uint8_t *data, const rlp_field_t *field, uint8_t *value) {
     if (field->kind != RLP_KIND_BYTE)
         return RLP_ERROR_INVALID_KIND;
 

@@ -45,7 +45,7 @@ int16_t rlp_decode(const uint8_t *data,
                    uint16_t *len,
                    uint16_t *dataOffset);
 
-// parses and splits the buffer into fields
+// parses and splits the buffer into rootFields
 int8_t rlp_parseStream(const uint8_t *data,
                        uint64_t dataLen,
                        rlp_field_t *fields,
@@ -54,7 +54,7 @@ int8_t rlp_parseStream(const uint8_t *data,
 
 // reads a byte from the field
 int8_t rlp_readByte(const uint8_t *data,
-                    rlp_field_t *field,
+                    const rlp_field_t *field,
                     uint8_t *value);
 
 // reads a buffer into value. These are not actually zero terminate strings but buffers
@@ -63,17 +63,12 @@ int8_t rlp_readString(const uint8_t *data,
                       uint8_t *value,
                       uint16_t maxLen);
 
-// reads a list and splits into fields
+// reads a list and splits into rootFields
 int8_t rlp_readList(const uint8_t *data,
                     const rlp_field_t *field,
                     rlp_field_t *listFields,
                     uint8_t maxListFieldCount,
                     uint16_t *listFieldCount);
-
-// reads a variable uint256
-int8_t rlp_readUInt256(const uint8_t *data,
-                       const rlp_field_t *field,
-                       uint256_t *value);
 
 // reads a variable uint256
 int8_t rlp_readUInt256(const uint8_t *data,
