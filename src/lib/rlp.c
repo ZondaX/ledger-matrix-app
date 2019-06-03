@@ -124,6 +124,7 @@ int8_t rlp_readString(const uint8_t *data, const rlp_field_t *field, uint8_t *va
     if (field->valueLen > maxLen)
         return RLP_ERROR_BUFFER_TOO_SMALL;
 
+    MEMSET(value, 0, maxLen);
     MEMCPY(value, data + field->fieldOffset + field->valueOffset, field->valueLen);
     return RLP_NO_ERROR;
 }
