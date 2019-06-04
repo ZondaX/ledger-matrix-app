@@ -23,16 +23,16 @@ extern "C" {
 #endif
 
 #define MANTX_ROOTFIELD_COUNT 13
-#define MANTX_EXTRATOFIELD_COUNT 1
-#define MANTX_EXTRATO2FIELD_COUNT 3
+#define MANTX_EXTRATOFIELD_COUNT 3
 
 ///////////////
 #define MANTX_NO_ERROR 0
 #define MANTX_ERROR_UNEXPECTED_ROOT -1
 #define MANTX_ERROR_UNEXPECTED_FIELD_COUNT -2
 #define MANTX_ERROR_UNEXPECTED_FIELD -3
-#define MANTX_ERROR_UNEXPECTED_DISPLAY_IDX -4
-#define MANTX_ERROR_INVALID_TIME -5
+#define MANTX_ERROR_UNEXPECTED_FIELD_TYPE -4
+#define MANTX_ERROR_UNEXPECTED_DISPLAY_IDX -5
+#define MANTX_ERROR_INVALID_TIME -6
 
 #define MANTX_FIELD_NONCE        0
 #define MANTX_FIELD_GASPRICE     1
@@ -53,21 +53,16 @@ extern "C" {
 // These field may or may not be available
 #define MANTX_FIELD_EXTRATO_TXTYPE  13
 #define MANTX_FIELD_EXTRATO_LOCKHEIGHT  14
+#define MANTX_FIELD_EXTRATO_TO          15
 
 #define MANTX_DISPLAY_COUNT 12
 
 typedef struct {
     rlp_field_t root;
-
-    uint8_t *rootData;
     rlp_field_t rootFields[MANTX_ROOTFIELD_COUNT];
-
-    uint8_t *extraToData;
     rlp_field_t extraToFields[MANTX_EXTRATOFIELD_COUNT];
-
-    uint8_t *extraToData2;
-    rlp_field_t extraToFields2[MANTX_EXTRATOFIELD_COUNT];
-
+    uint8_t extraToToCount;
+    uint8_t JsonCount;
 } mantx_context_t;
 
 // parse and check a tx buffer

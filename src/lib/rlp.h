@@ -47,6 +47,7 @@ int16_t rlp_decode(const uint8_t *data,
 
 // parses and splits the buffer into rootFields
 int8_t rlp_parseStream(const uint8_t *data,
+                       uint16_t dataOffset,
                        uint64_t dataLen,
                        rlp_field_t *fields,
                        uint8_t maxFieldCount,

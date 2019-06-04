@@ -18,10 +18,10 @@
 #include "uint256.h"
 
 int16_t rlp_decode(
-        const uint8_t *data,
-        uint8_t *kind,
-        uint16_t *len,
-        uint16_t *valueOffset) {
+    const uint8_t *data,
+    uint8_t *kind,
+    uint16_t *len,
+    uint16_t *valueOffset) {
 
     // TODO: Do not allow uint64 lengths
 
@@ -76,19 +76,20 @@ int16_t rlp_decode(
 }
 
 int8_t rlp_parseStream(const uint8_t *data,
+                       uint16_t dataOffset,
                        uint64_t dataLen,
                        rlp_field_t *fields,
                        uint8_t maxFieldCount,
                        uint16_t *fieldCount) {
-    uint64_t offset = 0;
+    uint64_t offset = dataOffset;
     *fieldCount = 0;
 
     while (offset < dataLen && *fieldCount < maxFieldCount) {
         int16_t bytesConsumed = rlp_decode(
-                data + offset,
-                &fields[*fieldCount].kind,
-                &fields[*fieldCount].valueLen,
-                &fields[*fieldCount].valueOffset);
+            data + offset,
+            &fields[*fieldCount].kind,
+            &fields[*fieldCount].valueLen,
+            &fields[*fieldCount].valueOffset);
         fields[*fieldCount].fieldOffset = offset;
 
         if (bytesConsumed < 0) {
@@ -137,8 +138,9 @@ int8_t rlp_readList(const uint8_t *data,
     if (field->kind != RLP_KIND_LIST)
         return RLP_ERROR_INVALID_KIND;
 
-    return rlp_parseStream(data + field->fieldOffset + field->valueOffset,
-                           field->valueLen,
+    return rlp_parseStream(data,
+                           field->fieldOffset + field->valueOffset,
+                           field->fieldOffset + field->valueOffset + field->valueLen,
                            listFields,
                            maxListFieldCount,
                            listFieldCount);
@@ -147,17 +149,28 @@ int8_t rlp_readList(const uint8_t *data,
 int8_t rlp_readUInt256(const uint8_t *data,
                        const rlp_field_t *field,
                        uint256_t *value) {
-    if (field->kind != RLP_KIND_STRING)
-        return RLP_ERROR_INVALID_KIND;
+    if (field->kind == RLP_KIND_STRING) {
+        uint8_t tmpBuffer[32];
 
-    uint8_t tmpBuffer[32];
+        MEMSET(tmpBuffer, 0, 32);
+        MEMMOVE(tmpBuffer - field->valueLen + 32,
+                data + field->valueOffset + field->fieldOffset,
+                field->valueLen);
 
-    MEMSET(tmpBuffer, 0, 32);
-    MEMMOVE(tmpBuffer - field->valueLen + 32,
-            data + field->valueOffset + field->fieldOffset,
-            field->valueLen);
+        readu256BE(tmpBuffer, value);
 
-    readu256BE(tmpBuffer, value);
+        return RLP_NO_ERROR;
+    }
 
-    return RLP_NO_ERROR;
+    if (field->kind == RLP_KIND_BYTE) {
+        uint8_t tmpBuffer[32];
+
+        MEMSET(tmpBuffer, 0, 32);
+        rlp_readByte(data, field, tmpBuffer+31);
+        readu256BE(tmpBuffer, value);
+
+        return RLP_NO_ERROR;
+    }
+
+    return RLP_ERROR_INVALID_KIND;
 }
