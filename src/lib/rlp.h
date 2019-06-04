@@ -43,7 +43,7 @@ typedef struct {
 int16_t rlp_decode(const uint8_t *data,
                    uint8_t *kind,
                    uint16_t *len,
-                   uint16_t *dataOffset);
+                   uint16_t *valueOffset);
 
 // parses and splits the buffer into rootFields
 int8_t rlp_parseStream(const uint8_t *data,
@@ -60,7 +60,7 @@ int8_t rlp_readByte(const uint8_t *data,
 // reads a buffer into value. These are not actually zero terminate strings but buffers
 int8_t rlp_readString(const uint8_t *data,
                       const rlp_field_t *field,
-                      uint8_t *value,
+                      char *value,
                       uint16_t maxLen);
 
 // reads a list and splits into rootFields

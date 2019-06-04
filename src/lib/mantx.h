@@ -22,6 +22,11 @@
 extern "C" {
 #endif
 
+#define MANTX_ROOTFIELD_COUNT 13
+#define MANTX_EXTRATOFIELD_COUNT 1
+#define MANTX_EXTRATO2FIELD_COUNT 3
+
+///////////////
 #define MANTX_NO_ERROR 0
 #define MANTX_ERROR_UNEXPECTED_ROOT -1
 #define MANTX_ERROR_UNEXPECTED_FIELD_COUNT -2
@@ -43,12 +48,13 @@ extern "C" {
 #define MANTX_FIELD_ENTERTYPE    9
 #define MANTX_FIELD_ISENTRUSTTX  10
 #define MANTX_FIELD_COMMITTIME   11
-#define MANTX_FIELD_EXTRATO      12
+#define MANTX_FIELD_EXTRATO      12     // This field is a list so it is not shown
 
-#define MANTX_ROOTFIELD_COUNT 13
-#define MANTX_EXTRATOFIELD_COUNT 1
-#define MANTX_EXTRATO2FIELD_COUNT 3
-#define MANTX_DISPLAY_COUNT 11
+// These field may or may not be available
+#define MANTX_FIELD_EXTRATO_TXTYPE  13
+#define MANTX_FIELD_EXTRATO_LOCKHEIGHT  14
+
+#define MANTX_DISPLAY_COUNT 12
 
 typedef struct {
     rlp_field_t root;
@@ -67,7 +73,7 @@ typedef struct {
 // parse and check a tx buffer
 int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen);
 
-const char *maxtx_getFieldName(uint8_t fieldIdx);
+const char *maxtx_getDisplayName(uint8_t displayIndex);
 
 // get a readable output for each field
 int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *out, uint16_t outLen);

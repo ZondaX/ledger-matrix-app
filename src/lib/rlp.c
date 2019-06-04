@@ -21,7 +21,7 @@ int16_t rlp_decode(
         const uint8_t *data,
         uint8_t *kind,
         uint16_t *len,
-        uint16_t *dataOffset) {
+        uint16_t *valueOffset) {
 
     // TODO: Do not allow uint64 lengths
 
@@ -29,14 +29,14 @@ int16_t rlp_decode(
     if (p >= 0 && p <= 0x7F) {
         *kind = RLP_KIND_BYTE;
         *len = 0;
-        *dataOffset = 0;
+        *valueOffset = 0;
         return 1; // 1 byte to consume from the stream
     }
 
     if (p >= 0x80 && p <= 0xb7) {
         *kind = RLP_KIND_STRING;
         *len = p - 0x80;
-        *dataOffset = 1;
+        *valueOffset = 1;
         return 1 + *len;
     }
 
@@ -48,14 +48,14 @@ int16_t rlp_decode(
             *len <<= 8u;
             *len += *(data + 1 + i);
         }
-        *dataOffset = 1 + len_len;
+        *valueOffset = 1 + len_len;
         return 1 + len_len + *len;
     }
 
     if (p >= 0xc0 && p <= 0xf7) {
         *kind = RLP_KIND_LIST;
         *len = p - 0xc0;
-        *dataOffset = 1;
+        *valueOffset = 1;
         return 1 + *len;
     }
 
@@ -68,7 +68,7 @@ int16_t rlp_decode(
             *len <<= 8u;
             *len += *(data + 1 + i);
         }
-        *dataOffset = 1 + len_len;
+        *valueOffset = 1 + len_len;
         return 1 + len_len + *len;
     }
 
@@ -117,7 +117,7 @@ int8_t rlp_readByte(const uint8_t *data, const rlp_field_t *field, uint8_t *valu
     return RLP_NO_ERROR;
 }
 
-int8_t rlp_readString(const uint8_t *data, const rlp_field_t *field, uint8_t *value, uint16_t maxLen) {
+int8_t rlp_readString(const uint8_t *data, const rlp_field_t *field, char *value, uint16_t maxLen) {
     if (field->kind != RLP_KIND_STRING)
         return RLP_ERROR_INVALID_KIND;
 
@@ -158,4 +158,6 @@ int8_t rlp_readUInt256(const uint8_t *data,
             field->valueLen);
 
     readu256BE(tmpBuffer, value);
+
+    return RLP_NO_ERROR;
 }

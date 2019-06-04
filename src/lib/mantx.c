@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <time.h>
 
-const char *fieldNames[] = {
+const char *displayFieldNames[] = {
     "Nonce",
     "Gas Price",
     "Gas Limit",
@@ -29,15 +29,18 @@ const char *fieldNames[] = {
     "Value",
     "Data",
     "ChainID",  // According to EIP155
-    "R",
-    "S",
+//    "R",
+//    "S",
     "EnterType",
     "IsEntrustTx",
     "CommitTime",
-    "ExtraTo"
+//    "UNUSED-ExtraTo",
+    "TxType",
+    "LockHeight",
+    "Tx_to"
 };
 
-const uint8_t displayIdxs[] = {
+const uint8_t displayItemFieldIdxs[] = {
     MANTX_FIELD_NONCE,
     MANTX_FIELD_GASPRICE,
     MANTX_FIELD_GASLIMIT,
@@ -50,7 +53,9 @@ const uint8_t displayIdxs[] = {
     MANTX_FIELD_ENTERTYPE,
     MANTX_FIELD_ISENTRUSTTX,
     MANTX_FIELD_COMMITTIME,
-    MANTX_FIELD_EXTRATO
+//    MANTX_FIELD_EXTRATO,
+    MANTX_FIELD_EXTRATO_TXTYPE,
+    MANTX_FIELD_EXTRATO_LOCKHEIGHT,
 };
 
 int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
@@ -69,73 +74,93 @@ int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
         return err;
     if (fieldCount != MANTX_ROOTFIELD_COUNT)
         return MANTX_ERROR_UNEXPECTED_FIELD_COUNT;
-    ctx->rootData = data + ctx->root.fieldOffset + ctx->root.valueOffset;
+    ctx->rootData = data + ctx->root.valueOffset;
 
     // Now parse the extraTo field
     const rlp_field_t *extraToField = &ctx->rootFields[MANTX_FIELD_EXTRATO];
-    err = rlp_readList(ctx->rootData, extraToField, ctx->extraToFields, MANTX_EXTRATOFIELD_COUNT, &fieldCount);
+    err = rlp_readList(ctx->rootData,
+                       extraToField,
+                       ctx->extraToFields,
+                       MANTX_EXTRATOFIELD_COUNT, &fieldCount);
     if (err != MANTX_NO_ERROR)
         return err;
     if (fieldCount != MANTX_EXTRATOFIELD_COUNT)
         return MANTX_ERROR_UNEXPECTED_FIELD_COUNT;
-    ctx->extraToData = ctx->rootData + ctx->extraToFields[0].fieldOffset + ctx->extraToFields[0].valueOffset;
+    ctx->extraToData = ctx->rootData +
+                       ctx->extraToFields[0].fieldOffset +
+                       ctx->extraToFields[0].valueOffset;
 
     // Now parse the extraTo2 field
     const rlp_field_t *extraToField2 = &ctx->extraToFields[0];
-    err = rlp_readList(ctx->extraToData, extraToField2, ctx->extraToFields2, MANTX_EXTRATO2FIELD_COUNT, &fieldCount);
+    err = rlp_readList(ctx->extraToData,
+                       extraToField2,
+                       ctx->extraToFields2,
+                       MANTX_EXTRATO2FIELD_COUNT, &fieldCount);
     if (err != MANTX_NO_ERROR)
         return err;
     if (fieldCount != MANTX_EXTRATO2FIELD_COUNT)
         return MANTX_ERROR_UNEXPECTED_FIELD_COUNT;
+    ctx->extraToData2 = ctx->extraToData +
+                        ctx->extraToFields2[0].fieldOffset +
+                        ctx->extraToFields2[0].valueOffset;
 
     return MANTX_NO_ERROR;
 }
 
-const char *maxtx_getFieldName(uint8_t fieldIdx) {
-    if (fieldIdx > MANTX_ROOTFIELD_COUNT)
+const char *maxtx_getDisplayName(uint8_t displayIndex) {
+    if (displayIndex > MANTX_ROOTFIELD_COUNT)
         return "? Unknown";
-    return fieldNames[fieldIdx];
+    return displayFieldNames[displayIndex];
 }
 
 int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *out, uint16_t outLen) {
-    const rlp_field_t *f = ctx->rootFields + fieldIdx;
-    const uint8_t *d = ctx->rootData;
-
     MEMSET(out, 0, outLen);
-
     uint256_t tmp;
 
     switch (fieldIdx) {
         case MANTX_FIELD_NONCE: {
+            const rlp_field_t *f = ctx->rootFields + fieldIdx;
+            const uint8_t *d = ctx->rootData;
             rlp_readUInt256(d, f, &tmp);
             tostring256(&tmp, 10, out, outLen);
             break;
         }
         case MANTX_FIELD_GASPRICE: {
+            const rlp_field_t *f = ctx->rootFields + fieldIdx;
+            const uint8_t *d = ctx->rootData;
             rlp_readUInt256(d, f, &tmp);
             tostring256(&tmp, 10, out, outLen);
             break;
         }
         case MANTX_FIELD_GASLIMIT: {
+            const rlp_field_t *f = ctx->rootFields + fieldIdx;
+            const uint8_t *d = ctx->rootData;
             rlp_readUInt256(d, f, &tmp);
             tostring256(&tmp, 10, out, outLen);
             break;
         }
         case MANTX_FIELD_TO: {
-            rlp_readString(d, f, out, outLen);
+            const rlp_field_t *f = ctx->rootFields + fieldIdx;
+            const uint8_t *d = ctx->rootData;
+            rlp_readString(d, f, (char *) out, outLen);
             break;
         }
         case MANTX_FIELD_VALUE: {
+            const rlp_field_t *f = ctx->rootFields + fieldIdx;
+            const uint8_t *d = ctx->rootData;
             rlp_readUInt256(d, f, &tmp);
             tostring256(&tmp, 10, out, outLen);
             break;
         }
         case MANTX_FIELD_DATA: {
-            rlp_readString(d, f, out, outLen);
+            const rlp_field_t *f = ctx->rootFields + fieldIdx;
+            const uint8_t *d = ctx->rootData;
+            rlp_readString(d, f, (char *) out, outLen);
             break;
         }
         case MANTX_FIELD_V: {
-            // TODO fix chain id
+            const rlp_field_t *f = ctx->rootFields + fieldIdx;
+            const uint8_t *d = ctx->rootData;
             uint8_t tmpByte;
             rlp_readByte(d, f, &tmpByte);
             snprintf(out, outLen, "%d", tmpByte);
@@ -143,21 +168,27 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *
         }
         case MANTX_FIELD_R:
             // empty response
-            out[0] = 0;
             break;
         case MANTX_FIELD_S:
             // empty response
-            out[0] = 0;
             break;
-        case MANTX_FIELD_ENTERTYPE:
+        case MANTX_FIELD_ENTERTYPE: {
+            const rlp_field_t *f = ctx->rootFields + fieldIdx;
+            const uint8_t *d = ctx->rootData;
             rlp_readUInt256(d, f, &tmp);
             tostring256(&tmp, 10, out, outLen);
             break;
-        case MANTX_FIELD_ISENTRUSTTX:
+        }
+        case MANTX_FIELD_ISENTRUSTTX: {
+            const rlp_field_t *f = ctx->rootFields + fieldIdx;
+            const uint8_t *d = ctx->rootData;
             rlp_readUInt256(d, f, &tmp);
             tostring256(&tmp, 10, out, outLen);
             break;
+        }
         case MANTX_FIELD_COMMITTIME: {
+            const rlp_field_t *f = ctx->rootFields + fieldIdx;
+            const uint8_t *d = ctx->rootData;
             rlp_readUInt256(d, f, &tmp);
 
             // this should be limited to uint64_t
@@ -173,31 +204,42 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *
             strftime(out, outLen, "%d%b%Y %T", ptm);
             break;
         }
-        case MANTX_FIELD_EXTRATO:
+        case MANTX_FIELD_EXTRATO: {
+            break;
+        }
+        case MANTX_FIELD_EXTRATO_TXTYPE: {
+            // Is there an extra_to field?
+            const rlp_field_t *f = ctx->extraToFields2 + 0;
+            const uint8_t *d = ctx->extraToData2;
+            uint8_t tmpByte;
+            rlp_readByte(d, f, &tmpByte);
+            snprintf(out, outLen, "%d", tmpByte);
+            break;
+        }
+        case MANTX_FIELD_EXTRATO_LOCKHEIGHT: {
             snprintf(out, outLen, "???");
             // TODO: This will be a list
             break;
+        }
         default:
             return MANTX_ERROR_UNEXPECTED_FIELD;
     }
     return MANTX_NO_ERROR;
 }
 
-int8_t mantx_getItem(
-    mantx_context_t *ctx, uint8_t *data, uint8_t displayIdx,
-    char *outKey, uint16_t outKeyLen,
-    char *outValue, uint16_t outValueLen) {
+int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data, uint8_t displayIdx,
+                     char *outKey, uint16_t outKeyLen,
+                     char *outValue, uint16_t outValueLen) {
 
     if (displayIdx >= MANTX_DISPLAY_COUNT)
         return MANTX_ERROR_UNEXPECTED_DISPLAY_IDX;
 
-    // TODO: Check displayIdx ranges
-    uint8_t fieldIdx = displayIdxs[displayIdx];
+    uint8_t fieldIdx = displayItemFieldIdxs[displayIdx];
 
-    snprintf(outKey, outKeyLen, "%s", maxtx_getFieldName(fieldIdx));
-
-    if (mantx_print(ctx, data, fieldIdx, outValue, outValueLen) != MANTX_NO_ERROR) {
-
+    snprintf(outKey, outKeyLen, "%s", maxtx_getDisplayName(displayIdx));
+    uint8_t err = mantx_print(ctx, data, fieldIdx, outValue, outValueLen);
+    if (err != MANTX_NO_ERROR) {
+        return err;
     }
 
     return MANTX_NO_ERROR;
