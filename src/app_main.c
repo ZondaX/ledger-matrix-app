@@ -150,6 +150,9 @@ void handleApdu(volatile uint32_t *flags, volatile uint32_t *tx, uint32_t rx) {
 
                     if (requireConfirmation) {
                         // TODO: confirmation required
+                        view_address_show();
+                        *flags |= IO_ASYNCH_REPLY;
+                        break;
                     }
 
                     *tx = 0;
@@ -205,7 +208,7 @@ void app_init() {
     io_seproxyhal_init();
     USB_power(0);
     USB_power(1);
-    view_idle(0);
+    view_idle_show(0);
 }
 
 #pragma clang diagnostic push

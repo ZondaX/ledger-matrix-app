@@ -1,6 +1,6 @@
 /*******************************************************************************
+*   (c) 2019 ZondaX GmbH
 *   (c) 2016 Ledger
-*   (c) 2018 ZondaX GmbH
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -19,8 +19,32 @@
 #include "os.h"
 #include "cx.h"
 
+#if defined(TARGET_NANOX)
+#define MAX_CHARS_PER_TITLE_LINE    16
+#define MAX_CHARS_PER_KEY_LINE      64
+#define MAX_CHARS_PER_VALUE_LINE    256
+#define MAX_CHARS_HEXMESSAGE        100
+#else
+#define MAX_CHARS_PER_TITLE_LINE    16
+#define MAX_CHARS_PER_KEY_LINE      32
+#define MAX_CHARS_PER_VALUE_LINE    128
+#define MAX_CHARS_HEXMESSAGE        40
+#endif
+
+typedef struct {
+    char title[MAX_CHARS_PER_TITLE_LINE];
+    char key[MAX_CHARS_PER_KEY_LINE];
+    char value[MAX_CHARS_PER_VALUE_LINE];
+    int8_t idx;
+} view_t;
+
+extern view_t viewdata;
+
 /// view_init (initializes UI)
 void view_init(void);
 
 /// view_idle (idle view - main menu + status)
-void view_idle(unsigned int ignored);
+void view_idle_show(unsigned int ignored);
+
+// shows address in the screen
+void view_address_show();
