@@ -3,4 +3,4 @@
 
 This is a submodule that only contains the user app according to Ledger specs.
 
-Please refer to the [Ledger-MatrixAI](https://github.com/zondax/ledger-matrixai) for the complete source code, build instructions, etc. (unit tests, integration tests, documentation, etc.)  
+Please refer to the [Ledger-Matrix](https://github.com/zondax/ledger-matrix) for the complete source code, build instructions, etc. (unit tests, integration tests, documentation, etc.)

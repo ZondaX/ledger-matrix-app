@@ -1,4 +1,4 @@
-# MatrixAI App
+# Matrix App
 ## General structure
 
 The general structure of commands and responses is as follows:
@@ -105,7 +105,7 @@ The general structure of commands and responses is as follows:
 
 The first packet/chunk includes parameters
 
-All other packets/chunks should contain message to sign 
+All other packets/chunks should contain message to sign
 
 *First Packet*
 
