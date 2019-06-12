@@ -146,10 +146,9 @@ void handleApdu(volatile uint32_t *flags, volatile uint32_t *tx, uint32_t rx) {
                     // extract pubkey and generate a MAN address
                     extractPublicKey(bip44Path, pubKey);
                     ethAddressFromPubKey(ethAddress, pubKey + 1);
-                    manAddressFromEthAddr(manAddress, ethAddress);
+                    uint8_t addrLen = manAddressFromEthAddr(manAddress, ethAddress);
 
                     if (requireConfirmation) {
-                        // TODO: confirmation required
                         view_address_show();
                         *flags |= IO_ASYNCH_REPLY;
                         break;
@@ -157,7 +156,7 @@ void handleApdu(volatile uint32_t *flags, volatile uint32_t *tx, uint32_t rx) {
 
                     *tx = 0;
                     *tx += 65;  // PubKey
-                    *tx += 33;  // MAN address
+                    *tx += addrLen;  // MAN address
                     THROW(APDU_CODE_OK);
                     break;
                 }
