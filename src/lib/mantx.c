@@ -120,62 +120,64 @@ const char *maxtx_getDisplayName(uint8_t displayIndex) {
     return displayFieldNames[displayIndex];
 }
 
-void getDisplayTxExtraToType(char *out, uint16_t outLen, uint8_t txtype) {
+uint8_t getDisplayTxExtraToType(char *out, uint16_t outLen, uint8_t txtype) {
     switch (txtype) {
         case MANTX_TXTYPE_NORMAL:
-            snprintf(out, outLen, "%d Normal", txtype);
+            snprintf(out, outLen, "Normal");
             break;
         case MANTX_TXTYPE_BROADCAST:
-            snprintf(out, outLen, "%d Broadcast", txtype);
+            snprintf(out, outLen, "Broadcast");
             break;
         case MANTX_TXTYPE_MINER_REWARD:
-            snprintf(out, outLen, "%d Miner reward", txtype);
+            snprintf(out, outLen, "Miner reward");
             break;
         case MANTX_TXTYPE_REVOCABLE:
-            snprintf(out, outLen, "%d Revocable", txtype);
+            snprintf(out, outLen, "Revocable");
             break;
         case MANTX_TXTYPE_REVERT:
-            snprintf(out, outLen, "%d Revert", txtype);
+            snprintf(out, outLen, "Revert");
             break;
         case MANTX_TXTYPE_AUTHORIZED:
-            snprintf(out, outLen, "%d Authorized", txtype);
+            snprintf(out, outLen, "Authorize");
             break;
         case MANTX_TXTYPE_CANCEL_AUTH:
-            snprintf(out, outLen, "%d Cancel Auth", txtype);
+            snprintf(out, outLen, "Cancel Auth");
             break;
-        case MANTX_TXTYPE_FIXME1:
-            // FIXME: ????????
-            snprintf(out, outLen, "%d Normal", txtype);
-            break;
-        case MANTX_TXTYPE_FIXME2:
-            // FIXME: ????????
-            snprintf(out, outLen, "%d Normal", txtype);
-            break;
+//        case MANTX_TXTYPE_FIXME1:
+//            // FIXME: ????????
+//            snprintf(out, outLen, "%d Normal");
+//            break;
+//        case MANTX_TXTYPE_FIXME2:
+//            // FIXME: ????????
+//            snprintf(out, outLen, "%d Normal");
+//            break;
         case MANTX_TXTYPE_CREATE_CURR:
-            snprintf(out, outLen, "%d Create curr", txtype);
+            snprintf(out, outLen, "Create curr");
             break;
         case MANTX_TXTYPE_VERIF_REWARD:
-            snprintf(out, outLen, "%d Verif reward", txtype);
+            snprintf(out, outLen, "Verif reward");
             break;
         case MANTX_TXTYPE_INTEREST_REWARD:
-            snprintf(out, outLen, "%d Interest reward", txtype);
+            snprintf(out, outLen, "Interest reward");
             break;
         case MANTX_TXTYPE_TXFEE_REWARD:
-            snprintf(out, outLen, "%d Tx Fee reward", txtype);
+            snprintf(out, outLen, "Tx Fee reward");
             break;
         case MANTX_TXTYPE_LOTTERY_REWARD:
-            snprintf(out, outLen, "%d Lottery reward", txtype);
+            snprintf(out, outLen, "Lottery reward");
             break;
         case MANTX_TXTYPE_SET_BLACKLIST:
-            snprintf(out, outLen, "%d Set blacklist", txtype);
+            snprintf(out, outLen, "Set blacklist");
             break;
         case MANTX_TXTYPE_SUPERBLOCK:
-            snprintf(out, outLen, "%d Super block", txtype);
+            snprintf(out, outLen, "Super block");
             break;
         default:
-            snprintf(out, outLen, "Tx type %d", txtype);
+            return MANTX_ERROR_INVALID_TXTYPE;
             break;
     }
+
+    return RLP_NO_ERROR;
 };
 
 int8_t mantx_print(mantx_context_t *ctx,
@@ -317,10 +319,9 @@ int8_t mantx_print(mantx_context_t *ctx,
             break;
         }
         case MANTX_FIELD_EXTRATO_TXTYPE: {
-            const rlp_field_t *f = ctx->extraToFields;
-            err = rlp_readUInt256(data, f, &tmp);
+            *pageCount = 1;
+            err = getDisplayTxExtraToType(out, outLen, ctx->extraToTxType);
             if (err != RLP_NO_ERROR) { return err; }
-            tostring256(&tmp, 10, out, outLen);
             break;
         }
         case MANTX_FIELD_EXTRATO_LOCKHEIGHT: {
