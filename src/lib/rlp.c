@@ -18,10 +18,10 @@
 #include "uint256.h"
 
 int16_t rlp_decode(
-    const uint8_t *data,
-    uint8_t *kind,
-    uint16_t *len,
-    uint16_t *valueOffset) {
+        const uint8_t *data,
+        uint8_t *kind,
+        uint16_t *len,
+        uint16_t *valueOffset) {
 
     // TODO: Do not allow uint64 lengths
 
@@ -86,10 +86,10 @@ int8_t rlp_parseStream(const uint8_t *data,
 
     while (offset < dataLen && *fieldCount < maxFieldCount) {
         int16_t bytesConsumed = rlp_decode(
-            data + offset,
-            &fields[*fieldCount].kind,
-            &fields[*fieldCount].valueLen,
-            &fields[*fieldCount].valueOffset);
+                data + offset,
+                &fields[*fieldCount].kind,
+                &fields[*fieldCount].valueLen,
+                &fields[*fieldCount].valueOffset);
         fields[*fieldCount].fieldOffset = offset;
 
         if (bytesConsumed < 0) {
@@ -118,6 +118,38 @@ int8_t rlp_readByte(const uint8_t *data, const rlp_field_t *field, uint8_t *valu
     return RLP_NO_ERROR;
 }
 
+int8_t rlp_readStringPaging(const uint8_t *data, const rlp_field_t *field,
+                            char *value, uint16_t maxLen,
+                            uint16_t *valueLen,
+                            uint8_t pageIdx, uint8_t *pageCount) {
+    if (field->kind != RLP_KIND_STRING)
+        return RLP_ERROR_INVALID_KIND;
+
+    *pageCount = field->valueLen / maxLen;
+    if (field->valueLen % maxLen > 0) {
+        *pageCount = *pageCount + 1;
+    }
+
+    MEMSET(value, 0, maxLen);
+
+    uint16_t pageOffset = pageIdx * maxLen;
+    if (pageOffset > field->valueLen) {
+        return RLP_ERROR_INVALID_PAGE;
+    }
+
+    *valueLen = maxLen;
+    const uint16_t bytesLeft = field->valueLen - pageOffset;
+    if (*valueLen > bytesLeft) {
+        *valueLen = bytesLeft;
+    }
+
+    MEMCPY(value,
+           data + field->fieldOffset + field->valueOffset + pageOffset,
+           *valueLen);
+
+    return RLP_NO_ERROR;
+}
+
 int8_t rlp_readString(const uint8_t *data, const rlp_field_t *field, char *value, uint16_t maxLen) {
     if (field->kind != RLP_KIND_STRING)
         return RLP_ERROR_INVALID_KIND;
@@ -125,9 +157,9 @@ int8_t rlp_readString(const uint8_t *data, const rlp_field_t *field, char *value
     if (field->valueLen > maxLen)
         return RLP_ERROR_BUFFER_TOO_SMALL;
 
-    MEMSET(value, 0, maxLen);
-    MEMCPY(value, data + field->fieldOffset + field->valueOffset, field->valueLen);
-    return RLP_NO_ERROR;
+    uint8_t dummy;
+    uint16_t dummy2;
+    return rlp_readStringPaging(data, field, value, maxLen, &dummy2, 0, &dummy);
 }
 
 int8_t rlp_readList(const uint8_t *data,
@@ -166,7 +198,7 @@ int8_t rlp_readUInt256(const uint8_t *data,
         uint8_t tmpBuffer[32];
 
         MEMSET(tmpBuffer, 0, 32);
-        rlp_readByte(data, field, tmpBuffer+31);
+        rlp_readByte(data, field, tmpBuffer + 31);
         readu256BE(tmpBuffer, value);
 
         return RLP_NO_ERROR;

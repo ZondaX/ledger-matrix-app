@@ -17,6 +17,7 @@
 #include "mantx.h"
 #include "rlp.h"
 #include "uint256.h"
+#include "utils.h"
 
 #include <stdio.h>
 #include <time.h>
@@ -99,8 +100,16 @@ int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
     if (fieldCount != MANTX_EXTRATOFIELD_COUNT)
         return MANTX_ERROR_UNEXPECTED_FIELD_COUNT;
 
-    uint8_t extraToToCount = 0;
-    uint8_t JsonCount = 0;
+    // Extract extrato txType and cache it as metadata
+    const rlp_field_t *f = ctx->extraToFields;
+    uint256_t tmp;
+    err = rlp_readUInt256(data, f, &tmp);
+    if (err != RLP_NO_ERROR) { return err; }
+    ctx->extraToTxType = tmp.elements[1].elements[1];   // extract last byte
+
+    // TODO: Parse JSON and estimate number of pages for variable fields
+    ctx->extraToToCount = 0;
+    ctx->JsonCount = 0;
 
     return MANTX_NO_ERROR;
 }
@@ -113,52 +122,54 @@ const char *maxtx_getDisplayName(uint8_t displayIndex) {
 
 void getDisplayTxExtraToType(char *out, uint16_t outLen, uint8_t txtype) {
     switch (txtype) {
-        case 0:
+        case MANTX_TXTYPE_NORMAL:
             snprintf(out, outLen, "%d Normal", txtype);
             break;
-        case 1:
+        case MANTX_TXTYPE_BROADCAST:
             snprintf(out, outLen, "%d Broadcast", txtype);
             break;
-        case 2:
+        case MANTX_TXTYPE_MINER_REWARD:
             snprintf(out, outLen, "%d Miner reward", txtype);
             break;
-        case 3:
+        case MANTX_TXTYPE_REVOCABLE:
             snprintf(out, outLen, "%d Revocable", txtype);
             break;
-        case 4:
+        case MANTX_TXTYPE_REVERT:
             snprintf(out, outLen, "%d Revert", txtype);
             break;
-        case 5:
+        case MANTX_TXTYPE_AUTHORIZED:
             snprintf(out, outLen, "%d Authorized", txtype);
             break;
-        case 6:
+        case MANTX_TXTYPE_CANCEL_AUTH:
             snprintf(out, outLen, "%d Cancel Auth", txtype);
             break;
-        case 7:
+        case MANTX_TXTYPE_FIXME1:
+            // FIXME: ????????
             snprintf(out, outLen, "%d Normal", txtype);
             break;
-        case 8:
+        case MANTX_TXTYPE_FIXME2:
+            // FIXME: ????????
             snprintf(out, outLen, "%d Normal", txtype);
             break;
-        case 9:
+        case MANTX_TXTYPE_CREATE_CURR:
             snprintf(out, outLen, "%d Create curr", txtype);
             break;
-        case 10:
+        case MANTX_TXTYPE_VERIF_REWARD:
             snprintf(out, outLen, "%d Verif reward", txtype);
             break;
-        case 11:
+        case MANTX_TXTYPE_INTEREST_REWARD:
             snprintf(out, outLen, "%d Interest reward", txtype);
             break;
-        case 12:
+        case MANTX_TXTYPE_TXFEE_REWARD:
             snprintf(out, outLen, "%d Tx Fee reward", txtype);
             break;
-        case 13:
+        case MANTX_TXTYPE_LOTTERY_REWARD:
             snprintf(out, outLen, "%d Lottery reward", txtype);
             break;
-        case 14:
+        case MANTX_TXTYPE_SET_BLACKLIST:
             snprintf(out, outLen, "%d Set blacklist", txtype);
             break;
-        case 122:
+        case MANTX_TXTYPE_SUPERBLOCK:
             snprintf(out, outLen, "%d Super block", txtype);
             break;
         default:
@@ -167,10 +178,16 @@ void getDisplayTxExtraToType(char *out, uint16_t outLen, uint8_t txtype) {
     }
 };
 
-int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *out, uint16_t outLen) {
+int8_t mantx_print(mantx_context_t *ctx,
+                   uint8_t *data,
+                   uint8_t fieldIdx,
+                   char *out, uint16_t outLen,
+                   uint8_t pageIdx, uint8_t *pageCount) {
     MEMSET(out, 0, outLen);
     uint256_t tmp;
     uint8_t err;
+
+    *pageCount = 1;
 
     switch (fieldIdx) {
         case MANTX_FIELD_NONCE: {
@@ -209,7 +226,40 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *
         }
         case MANTX_FIELD_DATA: {
             const rlp_field_t *f = ctx->rootFields + fieldIdx;
-            err = rlp_readString(data, f, (char *) out, outLen);
+            uint16_t valueLen;
+
+            // FIXME: Use string or hexstring depending on TXTYPE -----------------------
+            switch (ctx->extraToTxType) {
+                case MANTX_TXTYPE_NORMAL:
+                    // ---------------- NO DATA FIELD
+                    *pageCount = 0;
+                    err = RLP_NO_ERROR;
+                    break;
+                case MANTX_TXTYPE_REVOCABLE:
+                case MANTX_TXTYPE_AUTHORIZED:
+                    // ---------------- JSON Payload
+                    err = rlp_readStringPaging(data, f,
+                                               (char *) out, (outLen - 1) / 2, &valueLen,
+                                               pageIdx, pageCount);
+                    break;
+                case MANTX_TXTYPE_BROADCAST:
+                case MANTX_TXTYPE_REVERT: {
+                    // ----------------- HEX payload
+                    err = rlp_readStringPaging(
+                        data, f,
+                        (char *) out,
+                        (outLen - 1) / 2,  // 2bytes per byte + zero termination
+                        &valueLen,
+                        pageIdx, pageCount);
+                    // now we need to convert to hexstring in place
+                    convertToHexstringInPlace((uint8_t *) out, valueLen, outLen);
+                    break;
+                }
+                default:
+                    err = MANTX_ERROR_INVALID_TXTYPE;
+                    break;
+            }
+
             if (err != RLP_NO_ERROR) { return err; }
             break;
         }
@@ -223,9 +273,11 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *
         }
         case MANTX_FIELD_R:
             // empty response
+            *pageCount = 0;
             break;
         case MANTX_FIELD_S:
             // empty response
+            *pageCount = 0;
             break;
         case MANTX_FIELD_ENTERTYPE: {
             const rlp_field_t *f = ctx->rootFields + fieldIdx;
@@ -260,6 +312,8 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *
             break;
         }
         case MANTX_FIELD_EXTRATO: {
+            // empty response
+            *pageCount = 0;
             break;
         }
         case MANTX_FIELD_EXTRATO_TXTYPE: {
@@ -276,8 +330,11 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *
             tostring256(&tmp, 10, out, outLen);
             break;
         }
-            // This is actually dynamic and there is another internal list
         case MANTX_FIELD_EXTRATO_TO: {
+            // empty response
+            *pageCount = 0;
+            // This is actually dynamic and there is another internal list
+            // FIXME: ???????
 //            const rlp_field_t *f = ctx->extraToFields + 2;
 //            rlp_readUInt256(data, f, &tmp);
 //            tostring256(&tmp, 10, out, outLen);
@@ -292,12 +349,13 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data, uint8_t fieldIdx, char *
 int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data,
                      uint8_t displayIdx,
                      char *outKey, uint16_t outKeyLen,
-                     char *outValue, uint16_t outValueLen) {
+                     char *outValue, uint16_t outValueLen,
+                     uint8_t pageIdx, uint8_t *pageCount) {
 
     if (displayIdx < MANTX_DISPLAY_COUNT) {
         uint8_t fieldIdx = displayItemFieldIdxs[displayIdx];
         snprintf(outKey, outKeyLen, "%s", maxtx_getDisplayName(displayIdx));
-        uint8_t err = mantx_print(ctx, data, fieldIdx, outValue, outValueLen);
+        uint8_t err = mantx_print(ctx, data, fieldIdx, outValue, outValueLen, pageIdx, pageCount);
         if (err != MANTX_NO_ERROR) {
             return err;
         }
@@ -305,10 +363,12 @@ int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data,
     }
 
     if (displayIdx < MANTX_DISPLAY_COUNT + ctx->extraToToCount) {
+        // TODO: return extraToData
         return MANTX_NO_ERROR;
     }
 
     if (displayIdx < MANTX_DISPLAY_COUNT + ctx->extraToToCount + ctx->JsonCount) {
+        // TODO: return JSON data fields
         return MANTX_NO_ERROR;
     }
 

@@ -16,6 +16,8 @@
 ********************************************************************************/
 
 #include "view.h"
+#include "actions.h"
+#include "apdu_codes.h"
 #include "glyphs.h"
 #include "bagl.h"
 #include "zxmacros.h"
@@ -24,11 +26,43 @@
 #include <string.h>
 #include <stdio.h>
 
+#define REVIEW_DATA_AVAILABLE 1
+#define REVIEW_NO_MORE_DATA   0
+
 view_t viewdata;
 
 void h_back() {
     view_idle_show(0);
     UX_WAIT();
+}
+
+void view_sign_internal_show();
+int8_t view_update_review();
+void view_review_show(void);
+
+void h_review(unsigned int _) {
+    UNUSED(_);
+    viewdata.idx = 0;
+    view_review_show();
+}
+
+void h_sign_accept(unsigned int _) {
+    UNUSED(_);
+    app_sign();
+    view_idle_show(0);
+    UX_WAIT();
+
+    set_code(G_io_apdu_buffer, 0, APDU_CODE_OK);
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
+}
+
+void h_sign_reject(unsigned int _) {
+    UNUSED(_);
+    view_idle_show(0);
+    UX_WAIT();
+
+    set_code(G_io_apdu_buffer, 0, APDU_CODE_COMMAND_NOT_ALLOWED);
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
 }
 
 #if defined(TARGET_NANOX)
@@ -84,10 +118,23 @@ static const bagl_element_t view_address[] = {
     UI_LabelLineScrolling(UIID_LABELSCROLL, 14, 30, 100, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value),
 };
 
+const ux_menu_entry_t menu_sign[] = {
+    {NULL, h_review, 0, NULL, "View transaction", NULL, 0, 0},
+    {NULL, h_sign_accept, 0, NULL, "Sign transaction", NULL, 0, 0},
+    {NULL, h_sign_reject, 0, &C_icon_back, "Reject", NULL, 60, 40},
+    UX_MENU_END
+};
+
+static const bagl_element_t view_review[] = {
+    UI_BACKGROUND_LEFT_RIGHT_ICONS,
+    UI_LabelLine(UIID_LABEL + 0, 0, 8, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.title),
+    UI_LabelLine(UIID_LABEL + 1, 0, 19, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.key),
+    UI_LabelLine(UIID_LABEL + 2, 0, 27, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value),
+};
+
 static unsigned int view_address_button(unsigned int button_mask, unsigned int button_mask_counter) {
     switch (button_mask) {
         case BUTTON_EVT_RELEASED | BUTTON_LEFT | BUTTON_RIGHT:
-            break;
         case BUTTON_EVT_RELEASED | BUTTON_LEFT:
             break;
         case BUTTON_EVT_RELEASED | BUTTON_RIGHT:
@@ -98,6 +145,36 @@ static unsigned int view_address_button(unsigned int button_mask, unsigned int b
     return 0;
 }
 
+static unsigned int view_review_button(unsigned int button_mask, unsigned int button_mask_counter) {
+    switch (button_mask) {
+        case BUTTON_EVT_RELEASED | BUTTON_LEFT | BUTTON_RIGHT:
+            // Press both left and right buttons to quit
+            view_sign_internal_show();
+            break;
+        case BUTTON_EVT_RELEASED | BUTTON_LEFT:
+            // Press left to progress to the previous element
+            viewdata.idx--;
+            if (view_update_review() == REVIEW_NO_MORE_DATA) {
+                view_sign_internal_show();
+            } else {
+                view_review_show();
+            }
+            UX_WAIT();
+            break;
+
+        case BUTTON_EVT_RELEASED | BUTTON_RIGHT:
+            // Press right to progress to the next element
+            viewdata.idx++;
+            if (view_update_review() == REVIEW_NO_MORE_DATA) {
+                view_sign_internal_show();
+            } else {
+                view_review_show();
+            }
+            UX_WAIT();
+            break;
+    }
+    return 0;
+}
 const bagl_element_t *view_prepro(const bagl_element_t *element) {
     switch (element->component.userid) {
         case UIID_ICONLEFT:
@@ -153,4 +230,38 @@ void view_address_show() {
     }
     ux_flow_init(0, ux_addr_flow, NULL);
 #endif
+}
+
+void view_sign_show() {
+#if defined(TARGET_NANOS)
+    viewdata.idx = 0;
+    view_update_review();
+    view_review_show();
+#elif defined(TARGET_NANOX)
+    view_sign_internal_show();
+#endif
+}
+
+void view_sign_internal_show(void) {
+#if defined(TARGET_NANOS)
+    UX_MENU_DISPLAY(0, menu_sign, NULL);
+#elif defined(TARGET_NANOX)
+    viewdata.idx = -1;
+    if(G_ux.stack_count == 0) {
+        ux_stack_push();
+    }
+    review_state.inside = 0;
+    review_state.no_more_data = 0;
+    ux_flow_init(0, ux_sign_flow, NULL);
+#endif
+}
+
+void view_review_show(void) {
+#if defined(TARGET_NANOS)
+    UX_DISPLAY(view_review, view_prepro);
+#endif
+}
+
+int8_t view_update_review() {
+    return REVIEW_NO_MORE_DATA;
 }

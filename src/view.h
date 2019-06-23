@@ -31,6 +31,13 @@
 #define MAX_CHARS_HEXMESSAGE        40
 #endif
 
+#define print_key(...) snprintf(viewdata.key, sizeof(viewdata.key), __VA_ARGS__);
+#define print_status(...) snprintf(viewdata.value, sizeof(viewdata.value), __VA_ARGS__);
+
+#if defined(TARGET_NANOX)
+#define CUR_FLOW G_ux.flow_stack[G_ux.stack_count-1]
+#endif
+
 typedef struct {
     char title[MAX_CHARS_PER_TITLE_LINE];
     char key[MAX_CHARS_PER_KEY_LINE];
