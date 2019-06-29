@@ -120,6 +120,29 @@ const char *maxtx_getDisplayName(uint8_t displayIndex) {
     return displayFieldNames[displayIndex];
 }
 
+const char *getError(int8_t errorCode) {
+    switch (errorCode) {
+        case MANTX_ERROR_UNEXPECTED_ROOT:
+            return "Unexpected root";
+        case MANTX_ERROR_UNEXPECTED_FIELD_COUNT:
+            return "Unexpected field count";
+        case MANTX_ERROR_UNEXPECTED_FIELD:
+            return "Unexpected field";
+        case MANTX_ERROR_UNEXPECTED_FIELD_TYPE:
+            return "Unexpected field type";
+        case MANTX_ERROR_UNEXPECTED_DISPLAY_IDX:
+            return "Unexpected display idx";
+        case MANTX_ERROR_INVALID_TIME:
+            return "Invalid TxType";
+        case MANTX_ERROR_INVALID_TXTYPE:
+            return "";
+        case MANTX_NO_ERROR:
+            return "No error";
+        default:
+            return "Unrecognized error code";
+    }
+}
+
 uint8_t getDisplayTxExtraToType(char *out, uint16_t outLen, uint8_t txtype) {
     switch (txtype) {
         case MANTX_TXTYPE_NORMAL:

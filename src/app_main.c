@@ -22,6 +22,7 @@
 #include <os.h>
 #include "zxmacros.h"
 #include "view.h"
+#include "lib/transaction.h"
 #include "lib/crypto.h"
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
@@ -102,6 +103,31 @@ void extractBip44(uint32_t rx, uint32_t offset) {
     }
 }
 
+bool process_chunk(volatile uint32_t *tx, uint32_t rx, bool getBip32) {
+    int packageIndex = G_io_apdu_buffer[OFFSET_PCK_INDEX];
+    int packageCount = G_io_apdu_buffer[OFFSET_PCK_COUNT];
+
+    uint16_t offset = OFFSET_DATA;
+    if (rx < offset) {
+        THROW(APDU_CODE_DATA_INVALID);
+    }
+
+    if (packageIndex == 1) {
+        transaction_initialize();
+        transaction_reset();
+
+        extractBip44(rx, OFFSET_DATA);
+
+        return packageIndex == packageCount;
+    }
+
+    if (transaction_append(&(G_io_apdu_buffer[offset]), rx - offset) != rx - offset) {
+        THROW(APDU_CODE_OUTPUT_BUFFER_TOO_SMALL);
+    }
+
+    return packageIndex == packageCount;
+}
+
 void handleApdu(volatile uint32_t *flags, volatile uint32_t *tx, uint32_t rx) {
     uint16_t sw = 0;
 
@@ -162,13 +188,27 @@ void handleApdu(volatile uint32_t *flags, volatile uint32_t *tx, uint32_t rx) {
                 }
 
                 case INS_SIGN_SECP256K1: {
-                    // TODO: handle packages
-                    // TODO: check derivation path
-                    // TODO: check payload type
-                    // TODO: get all packets
+                    if (!process_chunk(tx, rx, true))
+                        THROW(APDU_CODE_OK);
+
                     // TODO: parse tx
-                    // TODO: review tx
-                    // TODO: sign tx
+                    const char *error_msg = transaction_parse();
+                    if (error_msg != NULL) {
+                        int error_msg_length = strlen(error_msg);
+                        os_memmove(G_io_apdu_buffer, error_msg, error_msg_length);
+                        *tx += (error_msg_length);
+                        THROW(APDU_CODE_BAD_KEY_HANDLE);
+                    }
+
+//                    tx_display_index_root();
+//                    view_set_handlers(tx_getData, tx_accept_sign, tx_reject);
+//                    // TODO: -----------------
+//
+//                    // TODO: review/sign tx
+//                    view_sign_show();
+//                    *flags |= IO_ASYNCH_REPLY;
+
+                    // FIXME: remove this
                     THROW(APDU_CODE_OK);
                     break;
                 }
