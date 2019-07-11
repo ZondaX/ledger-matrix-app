@@ -16,4 +16,10 @@
 ********************************************************************************/
 #pragma once
 
-void app_sign();
+#include <stdint.h>
+
+uint8_t app_sign();
+
+uint8_t app_fill_address();
+
+void app_reply_address();

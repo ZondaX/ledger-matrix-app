@@ -48,12 +48,14 @@ void h_review(unsigned int _) {
 
 void h_sign_accept(unsigned int _) {
     UNUSED(_);
-    app_sign();
+
+    const uint8_t replyLen = app_sign();
+
     view_idle_show(0);
     UX_WAIT();
 
-    set_code(G_io_apdu_buffer, 0, APDU_CODE_OK);
-    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
+    set_code(G_io_apdu_buffer, replyLen, APDU_CODE_OK);
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, replyLen + 2);
 }
 
 void h_sign_reject(unsigned int _) {
@@ -129,7 +131,7 @@ static const bagl_element_t view_review[] = {
     UI_BACKGROUND_LEFT_RIGHT_ICONS,
     UI_LabelLine(UIID_LABEL + 0, 0, 8, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.title),
     UI_LabelLine(UIID_LABEL + 1, 0, 19, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.key),
-    UI_LabelLine(UIID_LABEL + 2, 0, 27, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value),
+    UI_LabelLine(UIID_LABEL + 2, 0, 30, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value),
 };
 
 static unsigned int view_address_button(unsigned int button_mask, unsigned int button_mask_counter) {
@@ -140,6 +142,7 @@ static unsigned int view_address_button(unsigned int button_mask, unsigned int b
         case BUTTON_EVT_RELEASED | BUTTON_RIGHT:
             view_idle_show(0);
             UX_WAIT();
+            app_reply_address();
             break;
     }
     return 0;
@@ -263,5 +266,17 @@ void view_review_show(void) {
 }
 
 int8_t view_update_review() {
-    return REVIEW_NO_MORE_DATA;
+    if (viewdata.idx < 0) {
+        return REVIEW_NO_MORE_DATA;
+    }
+
+    if (viewdata.idx > 5) {
+        return REVIEW_NO_MORE_DATA;
+    }
+
+    print_title("%02d", viewdata.idx);
+    print_key("key");
+    print_value("value");
+
+    return REVIEW_DATA_AVAILABLE;
 }

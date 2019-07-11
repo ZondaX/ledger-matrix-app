@@ -31,9 +31,6 @@
 #define MAX_CHARS_HEXMESSAGE        40
 #endif
 
-#define print_key(...) snprintf(viewdata.key, sizeof(viewdata.key), __VA_ARGS__);
-#define print_status(...) snprintf(viewdata.value, sizeof(viewdata.value), __VA_ARGS__);
-
 #if defined(TARGET_NANOX)
 #define CUR_FLOW G_ux.flow_stack[G_ux.stack_count-1]
 #endif
@@ -58,3 +55,7 @@ void view_address_show();
 
 // Shows review screen + later sign menu
 void view_sign_show();
+
+#define print_title(...) snprintf(viewdata.title, sizeof(viewdata.title), __VA_ARGS__)
+#define print_key(...) snprintf(viewdata.key, sizeof(viewdata.key), __VA_ARGS__);
+#define print_value(...) snprintf(viewdata.value, sizeof(viewdata.value), __VA_ARGS__);

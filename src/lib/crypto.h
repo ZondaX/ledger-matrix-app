@@ -23,6 +23,10 @@
 extern "C" {
 #endif
 
+#define BIP44_LEN_DEFAULT 5
+
+extern uint32_t bip44Path[BIP44_LEN_DEFAULT];
+
 uint8_t crc8(const uint8_t *data, size_t data_len);
 
 void ethAddressFromPubKey(uint8_t *ethAddress, uint8_t *pubkey);
