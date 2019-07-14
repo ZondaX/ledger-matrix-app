@@ -87,7 +87,7 @@ const char *transaction_parse() {
 }
 
 uint8_t transaction_getNumItems() {
-    return MANTX_DISPLAY_COUNT;
+    return maxtx_getNumItems(&ctx_parsed_tx);
 }
 
 int8_t transaction_getItem(int8_t displayIdx,
@@ -102,6 +102,14 @@ int8_t transaction_getItem(int8_t displayIdx,
                         outKey, outKeyLen,
                         outValue, outValueLen,
                         pageIdx, pageCount);
+
+    if (*pageCount > 1) {
+        // Append
+        uint8_t keyLen = strlen(outKey);
+        if (keyLen < outKeyLen) {
+            snprintf(outKey + keyLen, outKeyLen - keyLen, " [%d/%d]", pageIdx, *pageCount);
+        }
+    }
 
     // Convert error codes
     if (err == MANTX_ERROR_UNEXPECTED_DISPLAY_IDX)

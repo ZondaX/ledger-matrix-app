@@ -16,8 +16,12 @@
 ********************************************************************************/
 #pragma once
 
+#include <stdint.h>
+
+#if defined(BOLOS_SDK)
 #include "os.h"
 #include "cx.h"
+#endif
 
 #if defined(TARGET_NANOX)
 #define MAX_CHARS_PER_TITLE_LINE    16
@@ -25,9 +29,9 @@
 #define MAX_CHARS_PER_VALUE_LINE    256
 #define MAX_CHARS_HEXMESSAGE        100
 #else
-#define MAX_CHARS_PER_TITLE_LINE    16
 #define MAX_CHARS_PER_KEY_LINE      (32+1)
-#define MAX_CHARS_PER_VALUE_LINE    (16+1)
+#define MAX_CHARS_PER_VALUE_LINE    (34+1)
+#define MAX_CHARS_PER_VALUE2_LINE   (17+1)
 #define MAX_CHARS_HEXMESSAGE        40
 #endif
 
@@ -36,9 +40,9 @@
 #endif
 
 typedef struct {
-    char title[MAX_CHARS_PER_TITLE_LINE];
     char key[MAX_CHARS_PER_KEY_LINE];
     char value[MAX_CHARS_PER_VALUE_LINE];
+    char value2[MAX_CHARS_PER_VALUE2_LINE];
     int8_t idx;
     int8_t pageIdx;
     uint8_t pageCount;
@@ -61,3 +65,4 @@ void view_sign_show();
 #define print_title(...) snprintf(viewdata.title, sizeof(viewdata.title), __VA_ARGS__)
 #define print_key(...) snprintf(viewdata.key, sizeof(viewdata.key), __VA_ARGS__);
 #define print_value(...) snprintf(viewdata.value, sizeof(viewdata.value), __VA_ARGS__);
+#define print_value2(...) snprintf(viewdata.value2, sizeof(viewdata.value2), __VA_ARGS__);

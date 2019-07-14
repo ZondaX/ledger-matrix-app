@@ -24,6 +24,7 @@ extern "C" {
 
 #define MANTX_ROOTFIELD_COUNT 13
 #define MANTX_EXTRATOFIELD_COUNT 3
+#define MANTX_EXTRATOLISTFIELD_COUNT 10
 
 /////////////// ERRORS
 #define MANTX_NO_ERROR 0
@@ -81,8 +82,9 @@ typedef struct {
     rlp_field_t root;
     rlp_field_t rootFields[MANTX_ROOTFIELD_COUNT];
     rlp_field_t extraToFields[MANTX_EXTRATOFIELD_COUNT];
+    rlp_field_t extraToListFields[MANTX_EXTRATOLISTFIELD_COUNT];
     uint8_t extraToTxType;
-    uint8_t extraToToCount;
+    uint16_t extraToListCount;
     uint8_t JsonCount;
 } mantx_context_t;
 
@@ -96,6 +98,8 @@ int8_t mantx_print(mantx_context_t *ctx, uint8_t *data,
                               int8_t fieldIdx,
                               char *out, uint16_t outLen,
                               uint8_t pageIdx, uint8_t *pageCount);
+
+uint8_t maxtx_getNumItems(mantx_context_t *ctx);
 
 int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data,
                      int8_t displayIdx,

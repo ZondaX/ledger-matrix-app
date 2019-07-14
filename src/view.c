@@ -86,6 +86,17 @@ void h_sign_reject(unsigned int _) {
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
 }
 
+void splitValueField() {
+    // Split value
+    print_value2("");
+    uint16_t vlen = strlen(viewdata.value);
+    // TODO: Clean this
+    if (vlen > 17) {
+        strcpy(viewdata.value2, viewdata.value + 17);
+        viewdata.value[17] = 0;
+    }
+}
+
 #if defined(TARGET_NANOX)
 
 #include "ux.h"
@@ -134,9 +145,9 @@ const ux_menu_entry_t menu_main[] = {
 static const bagl_element_t view_address[] = {
     UI_FillRectangle(0, 0, 0, UI_SCREEN_WIDTH, UI_SCREEN_HEIGHT, 0x000000, 0xFFFFFF),
     UI_Icon(0, 128 - 7, 0, 7, 7, BAGL_GLYPH_ICON_CHECK),
-    UI_LabelLine(UIID_LABEL + 0, 0, 8, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.title),
-    UI_LabelLine(UIID_LABEL + 0, 0, 19, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.key),
-    UI_LabelLineScrolling(UIID_LABELSCROLL, 14, 30, 100, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value),
+    UI_LabelLine(UIID_LABEL + 0, 0, 8, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.key),
+    UI_LabelLine(UIID_LABEL + 0, 0, 19, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value),
+    UI_LabelLineScrolling(UIID_LABELSCROLL, 14, 30, 100, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value2),
 };
 
 const ux_menu_entry_t menu_sign[] = {
@@ -148,9 +159,9 @@ const ux_menu_entry_t menu_sign[] = {
 
 static const bagl_element_t view_review[] = {
     UI_BACKGROUND_LEFT_RIGHT_ICONS,
-    UI_LabelLine(UIID_LABEL + 0, 0, 8, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.title),
-    UI_LabelLine(UIID_LABEL + 1, 0, 19, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.key),
-    UI_LabelLine(UIID_LABEL + 2, 0, 30, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value),
+    UI_LabelLine(UIID_LABEL + 0, 0, 8, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.key),
+    UI_LabelLine(UIID_LABEL + 1, 0, 19, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value),
+    UI_LabelLine(UIID_LABEL + 2, 0, 30, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value2),
 };
 
 static unsigned int view_address_button(unsigned int button_mask, unsigned int button_mask_counter) {
@@ -241,9 +252,9 @@ void view_idle_show(unsigned int ignored) {
 void view_address_show() {
     // Address has been placed in the output buffer
     char *const manAddress = (char *) (G_io_apdu_buffer + 65);
-    snprintf(viewdata.title, MAX_CHARS_PER_TITLE_LINE, "Confirm");
-    snprintf(viewdata.key, MAX_CHARS_PER_KEY_LINE, "your address");
+    snprintf(viewdata.key, MAX_CHARS_PER_KEY_LINE, "Confirm address");
     snprintf(viewdata.value, MAX_CHARS_PER_VALUE_LINE, "%s", manAddress);
+    splitValueField();
 #if defined(TARGET_NANOS)
     UX_DISPLAY(view_address, view_prepro);
 #elif defined(TARGET_NANOX)
@@ -296,21 +307,13 @@ int8_t view_update_review() {
     }
 
     if (err != TX_NO_ERROR) {
-        print_title("ERR");
         print_key("");
         print_value("");
         // TODO: Reject and fail immediately
         return TX_NO_MORE_DATA;
     }
 
-    if (viewdata.pageCount > 1) {
-        print_title("%02d/%02d [%02d/%02d]",
-                    viewdata.idx + 1, transaction_getNumItems(),
-                    viewdata.pageIdx + 1, viewdata.pageCount);
-    } else {
-        print_title("%02d/%02d",
-                    viewdata.idx + 1, transaction_getNumItems());
-    }
+    splitValueField();
 
     return TX_NO_ERROR;
 }

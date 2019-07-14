@@ -18,10 +18,10 @@
 #include "uint256.h"
 
 int16_t rlp_decode(
-        const uint8_t *data,
-        uint8_t *kind,
-        uint16_t *len,
-        uint16_t *valueOffset) {
+    const uint8_t *data,
+    uint8_t *kind,
+    uint16_t *len,
+    uint16_t *valueOffset) {
 
     // TODO: Do not allow uint64 lengths
 
@@ -86,10 +86,10 @@ int8_t rlp_parseStream(const uint8_t *data,
 
     while (offset < dataLen && *fieldCount < maxFieldCount) {
         int16_t bytesConsumed = rlp_decode(
-                data + offset,
-                &fields[*fieldCount].kind,
-                &fields[*fieldCount].valueLen,
-                &fields[*fieldCount].valueOffset);
+            data + offset,
+            &fields[*fieldCount].kind,
+            &fields[*fieldCount].valueLen,
+            &fields[*fieldCount].valueOffset);
         fields[*fieldCount].fieldOffset = offset;
 
         if (bytesConsumed < 0) {

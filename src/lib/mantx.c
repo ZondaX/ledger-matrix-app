@@ -106,8 +106,18 @@ int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
     if (err != RLP_NO_ERROR) { return err; }
     ctx->extraToTxType = tmp.elements[1].elements[1];   // extract last byte
 
+    // TODO: Extract number of elements in ExtraTo Field 2
+    f = ctx->extraToFields + 2;
+    err = rlp_readList(data, f,
+                       ctx->extraToListFields,
+                       MANTX_EXTRATOLISTFIELD_COUNT,
+                       &ctx->extraToListCount);
+    if (err != MANTX_NO_ERROR)
+        return err;
+
+    // FIXME: Each item should be 3 items??
+
     // TODO: Parse JSON and estimate number of pages for variable fields
-    ctx->extraToToCount = 0;
     ctx->JsonCount = 0;
 
     return MANTX_NO_ERROR;
@@ -190,7 +200,6 @@ uint8_t getDisplayTxExtraToType(char *out, uint16_t outLen, uint8_t txtype) {
             break;
         default:
             return MANTX_ERROR_INVALID_TXTYPE;
-            break;
     }
 
     return RLP_NO_ERROR;
@@ -234,17 +243,11 @@ int8_t mantx_print(mantx_context_t *ctx,
         case MANTX_FIELD_TO: {
             const rlp_field_t *f = ctx->rootFields + fieldIdx;
             uint16_t valueLen;
-
             err = rlp_readStringPaging(
                 data, f,
                 (char *) out, outLen, &valueLen,
                 pageIdx, pageCount);
-
-            //            err = rlp_readString(data, f, (char *) out, outLen);
-//            if (err != RLP_NO_ERROR) {
-//                snprintf(out, outLen, "Err %d", err);
-//                return err;
-//            }
+            if (err != RLP_NO_ERROR) { return err; }
             break;
         }
         case MANTX_FIELD_VALUE: {
@@ -258,7 +261,6 @@ int8_t mantx_print(mantx_context_t *ctx,
             const rlp_field_t *f = ctx->rootFields + fieldIdx;
             uint16_t valueLen;
 
-            // FIXME: Use string or hexstring depending on TXTYPE -----------------------
             switch (ctx->extraToTxType) {
                 case MANTX_TXTYPE_NORMAL:
                     // ---------------- NO DATA FIELD
@@ -270,7 +272,7 @@ int8_t mantx_print(mantx_context_t *ctx,
                     // ---------------- JSON Payload
                     err = rlp_readStringPaging(
                         data, f,
-                        (char *) out, (outLen - 1) / 2, &valueLen,
+                        (char *) out, outLen, &valueLen,
                         pageIdx, pageCount);
                     break;
                 case MANTX_TXTYPE_BROADCAST:
@@ -385,6 +387,10 @@ int8_t mantx_print(mantx_context_t *ctx,
     return MANTX_NO_ERROR;
 }
 
+uint8_t maxtx_getNumItems(mantx_context_t *ctx) {
+    return MANTX_DISPLAY_COUNT + ctx->extraToListCount + ctx->JsonCount;
+}
+
 int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data,
                      int8_t displayIdx,
                      char *outKey, uint16_t outKeyLen,
@@ -440,9 +446,7 @@ int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data,
                 snprintf(outKey, outKeyLen, "?");
         }
 
-        int8_t err = MANTX_NO_ERROR;
-
-        err = mantx_print(
+        int8_t err = mantx_print(
             ctx, data, fieldIdx,
             outValue, outValueLen,
             pageIdx, pageCount);
@@ -450,12 +454,12 @@ int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data,
         return err;
     }
 
-    if (displayIdx < MANTX_DISPLAY_COUNT + ctx->extraToToCount) {
+    if (displayIdx < MANTX_DISPLAY_COUNT + ctx->extraToListCount) {
         // TODO: return extraToData
         return MANTX_NO_ERROR;
     }
 
-    if (displayIdx < MANTX_DISPLAY_COUNT + ctx->extraToToCount + ctx->JsonCount) {
+    if (displayIdx < MANTX_DISPLAY_COUNT + ctx->extraToListCount + ctx->JsonCount) {
         // TODO: return JSON data fields
         return MANTX_NO_ERROR;
     }
