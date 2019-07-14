@@ -22,25 +22,6 @@
 #include <stdio.h>
 #include <time.h>
 
-const char *displayFieldNames[] = {
-    "Nonce",
-    "Gas Price",
-    "Gas Limit",
-    "To",
-    "Value",
-    "Data",
-    "ChainID",  // According to EIP155
-//    "R",
-//    "S",
-    "EnterType",
-    "IsEntrustTx",
-    "CommitTime",
-//    "UNUSED-ExtraTo",
-    "TxType",
-    "LockHeight",
-    "Tx_to"
-};
-
 const uint8_t displayItemFieldIdxs[] = {
     MANTX_FIELD_NONCE,
     MANTX_FIELD_GASPRICE,
@@ -57,6 +38,21 @@ const uint8_t displayItemFieldIdxs[] = {
 //    MANTX_FIELD_EXTRATO,
     MANTX_FIELD_EXTRATO_TXTYPE,
     MANTX_FIELD_EXTRATO_LOCKHEIGHT,
+};
+
+const char *monthName[] = {
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Set",
+    "Oct",
+    "Nov",
+    "Dec"
 };
 
 int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
@@ -95,8 +91,11 @@ int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
                        &extraToFieldInternal,
                        ctx->extraToFields,
                        MANTX_EXTRATOFIELD_COUNT, &fieldCount);
-    if (err != MANTX_NO_ERROR)
+
+    if (err != MANTX_NO_ERROR) {
         return err;
+    }
+
     if (fieldCount != MANTX_EXTRATOFIELD_COUNT)
         return MANTX_ERROR_UNEXPECTED_FIELD_COUNT;
 
@@ -112,12 +111,6 @@ int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
     ctx->JsonCount = 0;
 
     return MANTX_NO_ERROR;
-}
-
-const char *maxtx_getDisplayName(uint8_t displayIndex) {
-    if (displayIndex > MANTX_ROOTFIELD_COUNT)
-        return "? Unknown";
-    return displayFieldNames[displayIndex];
 }
 
 const char *getError(int8_t errorCode) {
@@ -205,7 +198,7 @@ uint8_t getDisplayTxExtraToType(char *out, uint16_t outLen, uint8_t txtype) {
 
 int8_t mantx_print(mantx_context_t *ctx,
                    uint8_t *data,
-                   uint8_t fieldIdx,
+                   int8_t fieldIdx,
                    char *out, uint16_t outLen,
                    uint8_t pageIdx, uint8_t *pageCount) {
     MEMSET(out, 0, outLen);
@@ -219,7 +212,9 @@ int8_t mantx_print(mantx_context_t *ctx,
             const rlp_field_t *f = ctx->rootFields + fieldIdx;
             err = rlp_readUInt256(data, f, &tmp);
             if (err != RLP_NO_ERROR) { return err; }
-            tostring256(&tmp, 10, out, outLen);
+            if (!tostring256(&tmp, 10, out, outLen)) {
+                return MANTX_ERROR_UNEXPECTED_FIELD;
+            }
             break;
         }
         case MANTX_FIELD_GASPRICE: {
@@ -238,8 +233,18 @@ int8_t mantx_print(mantx_context_t *ctx,
         }
         case MANTX_FIELD_TO: {
             const rlp_field_t *f = ctx->rootFields + fieldIdx;
-            err = rlp_readString(data, f, (char *) out, outLen);
-            if (err != RLP_NO_ERROR) { return err; }
+            uint16_t valueLen;
+
+            err = rlp_readStringPaging(
+                data, f,
+                (char *) out, outLen, &valueLen,
+                pageIdx, pageCount);
+
+            //            err = rlp_readString(data, f, (char *) out, outLen);
+//            if (err != RLP_NO_ERROR) {
+//                snprintf(out, outLen, "Err %d", err);
+//                return err;
+//            }
             break;
         }
         case MANTX_FIELD_VALUE: {
@@ -263,9 +268,10 @@ int8_t mantx_print(mantx_context_t *ctx,
                 case MANTX_TXTYPE_REVOCABLE:
                 case MANTX_TXTYPE_AUTHORIZED:
                     // ---------------- JSON Payload
-                    err = rlp_readStringPaging(data, f,
-                                               (char *) out, (outLen - 1) / 2, &valueLen,
-                                               pageIdx, pageCount);
+                    err = rlp_readStringPaging(
+                        data, f,
+                        (char *) out, (outLen - 1) / 2, &valueLen,
+                        pageIdx, pageCount);
                     break;
                 case MANTX_TXTYPE_BROADCAST:
                 case MANTX_TXTYPE_REVERT: {
@@ -330,10 +336,19 @@ int8_t mantx_print(mantx_context_t *ctx,
                 return MANTX_ERROR_INVALID_TIME;
             }
 
+            // TODO: Implement date conversion
             time_t t = tmp.elements[1].elements[1] / 1000;
-            struct tm *ptm = gmtime(&t);
-
-            strftime(out, outLen, "%d%b%Y %T", ptm);
+//            struct tm *ptm = gmtime(&t);
+//            // ddmmmYYYYY HH:MM:SS
+//            snprintf(out, outLen, "%02d%s%04d %02d:%02d:%02d",
+//                     ptm->tm_mday,
+//                     monthName[ptm->tm_mon],
+//                     1900 + ptm->tm_year,
+//                     ptm->tm_hour,
+//                     ptm->tm_min,
+//                     ptm->tm_sec
+//            );
+            snprintf(out, outLen, "FIX");
             break;
         }
         case MANTX_FIELD_EXTRATO: {
@@ -371,19 +386,68 @@ int8_t mantx_print(mantx_context_t *ctx,
 }
 
 int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data,
-                     uint8_t displayIdx,
+                     int8_t displayIdx,
                      char *outKey, uint16_t outKeyLen,
                      char *outValue, uint16_t outValueLen,
                      uint8_t pageIdx, uint8_t *pageCount) {
+    if (displayIdx < 0) {
+        return MANTX_ERROR_UNEXPECTED_DISPLAY_IDX;
+    }
 
     if (displayIdx < MANTX_DISPLAY_COUNT) {
-        uint8_t fieldIdx = displayItemFieldIdxs[displayIdx];
-        snprintf(outKey, outKeyLen, "%s", maxtx_getDisplayName(displayIdx));
-        uint8_t err = mantx_print(ctx, data, fieldIdx, outValue, outValueLen, pageIdx, pageCount);
-        if (err != MANTX_NO_ERROR) {
-            return err;
+        snprintf(outValue, outValueLen, "some_value");
+
+        const uint8_t fieldIdx = PIC(displayItemFieldIdxs[displayIdx]);
+
+        switch (fieldIdx) {
+            case MANTX_FIELD_NONCE:
+                snprintf(outKey, outKeyLen, "Nonce");
+                break;
+            case MANTX_FIELD_GASPRICE:
+                snprintf(outKey, outKeyLen, "Gas Price");
+                break;
+            case MANTX_FIELD_GASLIMIT:
+                snprintf(outKey, outKeyLen, "Gas Limit");
+                break;
+            case MANTX_FIELD_TO:
+                snprintf(outKey, outKeyLen, "To");
+                break;
+            case MANTX_FIELD_VALUE:
+                snprintf(outKey, outKeyLen, "Value");
+                break;
+            case MANTX_FIELD_DATA:
+                snprintf(outKey, outKeyLen, "Data");
+                break;
+            case MANTX_FIELD_V:
+                snprintf(outKey, outKeyLen, "ChainID");
+                break;
+            case MANTX_FIELD_ENTERTYPE:
+                snprintf(outKey, outKeyLen, "EnterType");
+                break;
+            case MANTX_FIELD_ISENTRUSTTX:
+                snprintf(outKey, outKeyLen, "IsEntrustTx");
+                break;
+            case MANTX_FIELD_COMMITTIME:
+                snprintf(outKey, outKeyLen, "CommitTime");
+                break;
+            case MANTX_FIELD_EXTRATO_TXTYPE:
+                snprintf(outKey, outKeyLen, "TxType");
+                break;
+            case MANTX_FIELD_EXTRATO_LOCKHEIGHT:
+                snprintf(outKey, outKeyLen, "Lock Height");
+                break;
+            default:
+                snprintf(outKey, outKeyLen, "?");
         }
-        return MANTX_NO_ERROR;
+
+        int8_t err = MANTX_NO_ERROR;
+
+        err = mantx_print(
+            ctx, data, fieldIdx,
+            outValue, outValueLen,
+            pageIdx, pageCount);
+
+        return err;
     }
 
     if (displayIdx < MANTX_DISPLAY_COUNT + ctx->extraToToCount) {

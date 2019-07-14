@@ -125,12 +125,13 @@ int8_t rlp_readStringPaging(const uint8_t *data, const rlp_field_t *field,
     if (field->kind != RLP_KIND_STRING)
         return RLP_ERROR_INVALID_KIND;
 
+    MEMSET(value, 0, maxLen);
+    maxLen--;   // need 1 bytes for string termination
+
     *pageCount = field->valueLen / maxLen;
     if (field->valueLen % maxLen > 0) {
         *pageCount = *pageCount + 1;
     }
-
-    MEMSET(value, 0, maxLen);
 
     uint16_t pageOffset = pageIdx * maxLen;
     if (pageOffset > field->valueLen) {

@@ -26,8 +26,8 @@
 #define MAX_CHARS_HEXMESSAGE        100
 #else
 #define MAX_CHARS_PER_TITLE_LINE    16
-#define MAX_CHARS_PER_KEY_LINE      32
-#define MAX_CHARS_PER_VALUE_LINE    128
+#define MAX_CHARS_PER_KEY_LINE      (32+1)
+#define MAX_CHARS_PER_VALUE_LINE    (16+1)
 #define MAX_CHARS_HEXMESSAGE        40
 #endif
 
@@ -40,6 +40,8 @@ typedef struct {
     char key[MAX_CHARS_PER_KEY_LINE];
     char value[MAX_CHARS_PER_VALUE_LINE];
     int8_t idx;
+    int8_t pageIdx;
+    uint8_t pageCount;
 } view_t;
 
 extern view_t viewdata;

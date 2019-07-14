@@ -72,11 +72,9 @@ uint8_t *transaction_get_buffer() {
 }
 
 const char *transaction_parse() {
-    const char *transaction_buffer = (const char *) transaction_get_buffer();
-
     uint8_t err = mantx_parse(
         &ctx_parsed_tx,
-        (uint8_t *) transaction_buffer,
+        transaction_get_buffer(),
         transaction_get_buffer_length());
 
     if (err != MANTX_NO_ERROR) {
@@ -84,6 +82,33 @@ const char *transaction_parse() {
         return "ERROR"; // error_msg;
     }
 
-    // TODO: Validate values
+    // TODO: Validate values?
     return NULL;
+}
+
+uint8_t transaction_getNumItems() {
+    return MANTX_DISPLAY_COUNT;
+}
+
+int8_t transaction_getItem(int8_t displayIdx,
+                           char *outKey, uint16_t outKeyLen,
+                           char *outValue, uint16_t outValueLen,
+                           uint8_t pageIdx, uint8_t *pageCount) {
+    int8_t err = TX_NO_ERROR;
+
+    err = mantx_getItem(&ctx_parsed_tx,
+                        transaction_get_buffer(),
+                        displayIdx,
+                        outKey, outKeyLen,
+                        outValue, outValueLen,
+                        pageIdx, pageCount);
+
+    // Convert error codes
+    if (err == MANTX_ERROR_UNEXPECTED_DISPLAY_IDX)
+        return TX_NO_MORE_DATA;
+
+    if (err == MANTX_NO_ERROR)
+        return TX_NO_ERROR;
+
+    return err;
 }

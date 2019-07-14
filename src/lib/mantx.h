@@ -92,12 +92,13 @@ int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen);
 const char *maxtx_getDisplayName(uint8_t displayIndex);
 
 // get a readable output for each field
-int8_t mantx_print(mantx_context_t *ctx,
-                   uint8_t *data, uint8_t fieldIdx,
-                   char *out, uint16_t outLen,
-                   uint8_t pageIdx, uint8_t *pageCount);
+int8_t mantx_print(mantx_context_t *ctx, uint8_t *data,
+                              int8_t fieldIdx,
+                              char *out, uint16_t outLen,
+                              uint8_t pageIdx, uint8_t *pageCount);
 
-int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data, uint8_t displayIdx,
+int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data,
+                     int8_t displayIdx,
                      char *outKey, uint16_t outKeyLen,
                      char *outValue, uint16_t outValueLen,
                      uint8_t pageIdx, uint8_t *pageCount);

@@ -22,12 +22,10 @@
 #include "bagl.h"
 #include "zxmacros.h"
 #include "view_templates.h"
+#include "transaction.h"
 
 #include <string.h>
 #include <stdio.h>
-
-#define REVIEW_DATA_AVAILABLE 1
-#define REVIEW_NO_MORE_DATA   0
 
 view_t viewdata;
 
@@ -37,13 +35,34 @@ void h_back() {
 }
 
 void view_sign_internal_show();
+
 int8_t view_update_review();
+
 void view_review_show(void);
 
 void h_review(unsigned int _) {
     UNUSED(_);
     viewdata.idx = 0;
+    viewdata.pageIdx = 0;
+    viewdata.pageCount = 1;
+    view_update_review();
     view_review_show();
+}
+
+void h_decrease() {
+    viewdata.pageIdx--;
+    if (viewdata.pageIdx < 0) {
+        viewdata.idx--;
+        viewdata.pageIdx = 0;
+    }
+}
+
+void h_increase() {
+    viewdata.pageIdx++;
+    if (viewdata.pageIdx >= viewdata.pageCount) {
+        viewdata.idx++;
+        viewdata.pageIdx = 0;
+    }
 }
 
 void h_sign_accept(unsigned int _) {
@@ -156,8 +175,8 @@ static unsigned int view_review_button(unsigned int button_mask, unsigned int bu
             break;
         case BUTTON_EVT_RELEASED | BUTTON_LEFT:
             // Press left to progress to the previous element
-            viewdata.idx--;
-            if (view_update_review() == REVIEW_NO_MORE_DATA) {
+            h_decrease();
+            if (view_update_review() == TX_NO_MORE_DATA) {
                 view_sign_internal_show();
             } else {
                 view_review_show();
@@ -167,8 +186,8 @@ static unsigned int view_review_button(unsigned int button_mask, unsigned int bu
 
         case BUTTON_EVT_RELEASED | BUTTON_RIGHT:
             // Press right to progress to the next element
-            viewdata.idx++;
-            if (view_update_review() == REVIEW_NO_MORE_DATA) {
+            h_increase();
+            if (view_update_review() == TX_NO_MORE_DATA) {
                 view_sign_internal_show();
             } else {
                 view_review_show();
@@ -178,6 +197,7 @@ static unsigned int view_review_button(unsigned int button_mask, unsigned int bu
     }
     return 0;
 }
+
 const bagl_element_t *view_prepro(const bagl_element_t *element) {
     switch (element->component.userid) {
         case UIID_ICONLEFT:
@@ -237,9 +257,7 @@ void view_address_show() {
 
 void view_sign_show() {
 #if defined(TARGET_NANOS)
-    viewdata.idx = 0;
-    view_update_review();
-    view_review_show();
+    h_review(0);
 #elif defined(TARGET_NANOX)
     view_sign_internal_show();
 #endif
@@ -266,17 +284,33 @@ void view_review_show(void) {
 }
 
 int8_t view_update_review() {
-    if (viewdata.idx < 0) {
-        return REVIEW_NO_MORE_DATA;
+    int8_t err = TX_NO_ERROR;
+
+    err = transaction_getItem(viewdata.idx,
+                              viewdata.key, MAX_CHARS_PER_KEY_LINE,
+                              viewdata.value, MAX_CHARS_PER_VALUE_LINE,
+                              viewdata.pageIdx, &viewdata.pageCount);
+
+    if (err == TX_NO_MORE_DATA) {
+        return TX_NO_MORE_DATA;
     }
 
-    if (viewdata.idx > 5) {
-        return REVIEW_NO_MORE_DATA;
+    if (err != TX_NO_ERROR) {
+        print_title("ERR");
+        print_key("");
+        print_value("");
+        // TODO: Reject and fail immediately
+        return TX_NO_MORE_DATA;
     }
 
-    print_title("%02d", viewdata.idx);
-    print_key("key");
-    print_value("value");
+    if (viewdata.pageCount > 1) {
+        print_title("%02d/%02d [%02d/%02d]",
+                    viewdata.idx + 1, transaction_getNumItems(),
+                    viewdata.pageIdx + 1, viewdata.pageCount);
+    } else {
+        print_title("%02d/%02d",
+                    viewdata.idx + 1, transaction_getNumItems());
+    }
 
-    return REVIEW_DATA_AVAILABLE;
+    return TX_NO_ERROR;
 }

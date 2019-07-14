@@ -17,6 +17,9 @@
 
 #include "os.h"
 
+#define TX_NO_ERROR 0
+#define TX_NO_MORE_DATA 1
+
 void transaction_initialize();
 
 /// Clears the transaction buffer
@@ -41,3 +44,10 @@ uint8_t *transaction_get_buffer();
 /// This function should be called as soon as full buffer data is loaded.
 /// \return It returns NULL if json is valid or error message otherwise.
 const char *transaction_parse();
+
+uint8_t transaction_getNumItems();
+
+int8_t transaction_getItem(int8_t displayIdx,
+                           char *outKey, uint16_t outKeyLen,
+                           char *outValue, uint16_t outValueLen,
+                           uint8_t pageIdx, uint8_t *pageCount);
