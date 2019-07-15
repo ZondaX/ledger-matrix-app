@@ -30,8 +30,8 @@
 #define MAX_CHARS_HEXMESSAGE        100
 #else
 #define MAX_CHARS_PER_KEY_LINE      (32+1)
-#define MAX_CHARS_PER_VALUE_LINE    (34+1)
-#define MAX_CHARS_PER_VALUE2_LINE   (17+1)
+#define MAX_CHARS_PER_VALUE_LINE    (36+1)
+#define MAX_CHARS_PER_VALUE2_LINE   (18+1)
 #define MAX_CHARS_HEXMESSAGE        40
 #endif
 

@@ -18,9 +18,7 @@
 #include "rlp.h"
 #include "uint256.h"
 #include "utils.h"
-
 #include <stdio.h>
-#include <time.h>
 
 const uint8_t displayItemFieldIdxs[] = {
     MANTX_FIELD_NONCE,
@@ -38,21 +36,6 @@ const uint8_t displayItemFieldIdxs[] = {
 //    MANTX_FIELD_EXTRATO,
     MANTX_FIELD_EXTRATO_TXTYPE,
     MANTX_FIELD_EXTRATO_LOCKHEIGHT,
-};
-
-const char *monthName[] = {
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Set",
-    "Oct",
-    "Nov",
-    "Dec"
 };
 
 int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
@@ -339,18 +322,8 @@ int8_t mantx_print(mantx_context_t *ctx,
             }
 
             // TODO: Implement date conversion
-            time_t t = tmp.elements[1].elements[1] / 1000;
-//            struct tm *ptm = gmtime(&t);
-//            // ddmmmYYYYY HH:MM:SS
-//            snprintf(out, outLen, "%02d%s%04d %02d:%02d:%02d",
-//                     ptm->tm_mday,
-//                     monthName[ptm->tm_mon],
-//                     1900 + ptm->tm_year,
-//                     ptm->tm_hour,
-//                     ptm->tm_min,
-//                     ptm->tm_sec
-//            );
-            snprintf(out, outLen, "FIX");
+            uint64_t t = tmp.elements[1].elements[1] / 1000;
+            printTime(out, outLen, t);
             break;
         }
         case MANTX_FIELD_EXTRATO: {

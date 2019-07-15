@@ -28,6 +28,8 @@ extern "C" {
 // Converts data bytes into a hexstring !! IN PLACE !!
 uint8_t convertToHexstringInPlace(uint8_t *data, uint16_t dataLen, uint8_t dataLenMax);
 
+void printTime(char *out, uint16_t outLen, uint64_t t);
+
 #ifdef __cplusplus
 }
 #endif
