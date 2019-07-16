@@ -20,6 +20,8 @@
 #include "cx.h"
 #endif
 
+uint32_t bip44Path[5];
+
 // automatically generated LUT
 // from https://github.com/MatrixAINetwork/go-matrix/blob/6b61d8dbb8dfde44e896d359b17377d1a60f44db/crc8/crc8.go#L26
 // no reflect in or out

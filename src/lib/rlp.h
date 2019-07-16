@@ -28,6 +28,7 @@
 #define RLP_ERROR_INVALID_VALUE_LEN  -2
 #define RLP_ERROR_INVALID_FIELD_OFFSET  -3
 #define RLP_ERROR_BUFFER_TOO_SMALL  -4
+#define RLP_ERROR_INVALID_PAGE  -5
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,6 +58,15 @@ int8_t rlp_parseStream(const uint8_t *data,
 int8_t rlp_readByte(const uint8_t *data,
                     const rlp_field_t *field,
                     uint8_t *value);
+
+// reads a buffer into value. These are not actually zero terminate strings but buffers
+int8_t rlp_readStringPaging(const uint8_t *data,
+                            const rlp_field_t *field,
+                            char *value,
+                            uint16_t maxLen,
+                            uint16_t *valueLen,
+                            uint8_t pageIdx,
+                            uint8_t *pageCount);
 
 // reads a buffer into value. These are not actually zero terminate strings but buffers
 int8_t rlp_readString(const uint8_t *data,

@@ -533,6 +533,9 @@ bool tostring256(uint256_t *number, uint32_t baseParam, char *out,
     if ((baseParam < 2) || (baseParam > 16)) {
         return false;
     }
+
+    outLength--;    // Keep a byte for termination
+
     do {
         if (offset > (outLength - 1)) {
             return false;

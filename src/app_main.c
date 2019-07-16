@@ -22,6 +22,8 @@
 #include <os.h>
 #include "zxmacros.h"
 #include "view.h"
+#include "actions.h"
+#include "lib/transaction.h"
 #include "lib/crypto.h"
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
@@ -86,8 +88,6 @@ unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len) {
     return 0;
 }
 
-uint32_t bip44Path[5];
-
 void extractBip44(uint32_t rx, uint32_t offset) {
     if ((rx - offset) < 20) {
         THROW(APDU_CODE_DATA_INVALID);
@@ -100,6 +100,31 @@ void extractBip44(uint32_t rx, uint32_t offset) {
         bip44Path[1] != 0x8000013e) {
         THROW(APDU_CODE_DATA_INVALID);
     }
+}
+
+bool process_chunk(volatile uint32_t *tx, uint32_t rx, bool getBip32) {
+    int packageIndex = G_io_apdu_buffer[OFFSET_PCK_INDEX];
+    int packageCount = G_io_apdu_buffer[OFFSET_PCK_COUNT];
+
+    uint16_t offset = OFFSET_DATA;
+    if (rx < offset) {
+        THROW(APDU_CODE_DATA_INVALID);
+    }
+
+    if (packageIndex == 1) {
+        transaction_initialize();
+        transaction_reset();
+
+        extractBip44(rx, OFFSET_DATA);
+
+        return packageIndex == packageCount;
+    }
+
+    if (transaction_append(&(G_io_apdu_buffer[offset]), rx - offset) != rx - offset) {
+        THROW(APDU_CODE_OUTPUT_BUFFER_TOO_SMALL);
+    }
+
+    return packageIndex == packageCount;
 }
 
 void handleApdu(volatile uint32_t *flags, volatile uint32_t *tx, uint32_t rx) {
@@ -138,38 +163,35 @@ void handleApdu(volatile uint32_t *flags, volatile uint32_t *tx, uint32_t rx) {
                     extractBip44(rx, OFFSET_DATA);
                     uint8_t requireConfirmation = G_io_apdu_buffer[OFFSET_P1];
 
-                    // Put data directly in the apdu buffer
-                    uint8_t *const pubKey = G_io_apdu_buffer;
-                    char *const manAddress = (char *) (G_io_apdu_buffer + 65);
-                    uint8_t ethAddress[20];
-
-                    // extract pubkey and generate a MAN address
-                    extractPublicKey(bip44Path, pubKey);
-                    ethAddressFromPubKey(ethAddress, pubKey + 1);
-                    uint8_t addrLen = manAddressFromEthAddr(manAddress, ethAddress);
-
                     if (requireConfirmation) {
+                        app_fill_address();
                         view_address_show();
                         *flags |= IO_ASYNCH_REPLY;
                         break;
                     }
 
-                    *tx = 0;
-                    *tx += 65;  // PubKey
-                    *tx += addrLen;  // MAN address
+                    *tx = app_fill_address();
                     THROW(APDU_CODE_OK);
                     break;
                 }
 
                 case INS_SIGN_SECP256K1: {
-                    // TODO: handle packages
-                    // TODO: check derivation path
-                    // TODO: check payload type
-                    // TODO: get all packets
-                    // TODO: parse tx
-                    // TODO: review tx
-                    // TODO: sign tx
-                    THROW(APDU_CODE_OK);
+                    if (!process_chunk(tx, rx, true))
+                        THROW(APDU_CODE_OK);
+
+                    const char *error_msg = transaction_parse();
+                    if (error_msg != NULL) {
+                        int error_msg_length = strlen(error_msg);
+                        os_memmove(G_io_apdu_buffer, error_msg, error_msg_length);
+                        *tx += (error_msg_length);
+                        THROW(APDU_CODE_DATA_INVALID);
+                    }
+
+//                    TODO: preprocess data before showing
+//                    tx_display_index_root();
+
+                    view_sign_show();
+                    *flags |= IO_ASYNCH_REPLY;
                     break;
                 }
 

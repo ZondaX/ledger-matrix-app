@@ -16,29 +16,19 @@
 
 #pragma once
 
-#include "base58.h"
 #include <zxmacros.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define BIP44_LEN_DEFAULT 5
+#define UTILS_NOERROR 0
+#define UTILS_NOT_ENOUGH_DATA -1
 
-extern uint32_t bip44Path[BIP44_LEN_DEFAULT];
+// Converts data bytes into a hexstring !! IN PLACE !!
+uint8_t convertToHexstringInPlace(uint8_t *data, uint16_t dataLen, uint8_t dataLenMax);
 
-uint8_t crc8(const uint8_t *data, size_t data_len);
-
-void ethAddressFromPubKey(uint8_t *ethAddress, uint8_t *pubkey);
-
-uint8_t manAddressFromEthAddr(char *manAddress, uint8_t *ethAddress);
-
-void keccak(uint8_t *out, size_t out_len, uint8_t *in, size_t in_len);
-
-#if defined(TARGET_NANOS) || defined(TARGET_NANOX)
-void extractPublicKey(uint32_t bip44Path[5], uint8_t *pubKey);
-#endif
-
+void printTime(char *out, uint16_t outLen, uint64_t t);
 
 #ifdef __cplusplus
 }

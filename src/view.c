@@ -16,10 +16,13 @@
 ********************************************************************************/
 
 #include "view.h"
+#include "actions.h"
+#include "apdu_codes.h"
 #include "glyphs.h"
 #include "bagl.h"
 #include "zxmacros.h"
 #include "view_templates.h"
+#include "transaction.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -29,6 +32,69 @@ view_t viewdata;
 void h_back() {
     view_idle_show(0);
     UX_WAIT();
+}
+
+void view_sign_internal_show();
+
+int8_t view_update_review();
+
+void view_review_show(void);
+
+void h_review(unsigned int _) {
+    UNUSED(_);
+    viewdata.idx = 0;
+    viewdata.pageIdx = 0;
+    viewdata.pageCount = 1;
+    view_update_review();
+    view_review_show();
+}
+
+void h_decrease() {
+    viewdata.pageIdx--;
+    if (viewdata.pageIdx < 0) {
+        viewdata.idx--;
+        viewdata.pageIdx = 0;
+    }
+}
+
+void h_increase() {
+    viewdata.pageIdx++;
+    if (viewdata.pageIdx >= viewdata.pageCount) {
+        viewdata.idx++;
+        viewdata.pageIdx = 0;
+    }
+}
+
+void h_sign_accept(unsigned int _) {
+    UNUSED(_);
+
+    const uint8_t replyLen = app_sign();
+
+    view_idle_show(0);
+    UX_WAIT();
+
+    set_code(G_io_apdu_buffer, replyLen, APDU_CODE_OK);
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, replyLen + 2);
+}
+
+void h_sign_reject(unsigned int _) {
+    UNUSED(_);
+    view_idle_show(0);
+    UX_WAIT();
+
+    set_code(G_io_apdu_buffer, 0, APDU_CODE_COMMAND_NOT_ALLOWED);
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
+}
+
+void splitValueField() {
+    // Split value
+    print_value2("");
+    uint16_t vlen = strlen(viewdata.value);
+    // TODO: Clean this
+    if (vlen > 17) {
+        strcpy(viewdata.value2, viewdata.value + 17);
+        viewdata.value[17] = 0;
+    }
 }
 
 #if defined(TARGET_NANOX)
@@ -79,19 +145,64 @@ const ux_menu_entry_t menu_main[] = {
 static const bagl_element_t view_address[] = {
     UI_FillRectangle(0, 0, 0, UI_SCREEN_WIDTH, UI_SCREEN_HEIGHT, 0x000000, 0xFFFFFF),
     UI_Icon(0, 128 - 7, 0, 7, 7, BAGL_GLYPH_ICON_CHECK),
-    UI_LabelLine(UIID_LABEL + 0, 0, 8, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.title),
-    UI_LabelLine(UIID_LABEL + 0, 0, 19, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.key),
-    UI_LabelLineScrolling(UIID_LABELSCROLL, 14, 30, 100, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value),
+    UI_LabelLine(UIID_LABEL + 0, 0, 8, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.key),
+    UI_LabelLine(UIID_LABEL + 0, 0, 19, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value),
+    UI_LabelLineScrolling(UIID_LABELSCROLL, 14, 30, 100, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value2),
+};
+
+const ux_menu_entry_t menu_sign[] = {
+    {NULL, h_review, 0, NULL, "View transaction", NULL, 0, 0},
+    {NULL, h_sign_accept, 0, NULL, "Sign transaction", NULL, 0, 0},
+    {NULL, h_sign_reject, 0, &C_icon_back, "Reject", NULL, 60, 40},
+    UX_MENU_END
+};
+
+static const bagl_element_t view_review[] = {
+    UI_BACKGROUND_LEFT_RIGHT_ICONS,
+    UI_LabelLine(UIID_LABEL + 0, 0, 8, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.key),
+    UI_LabelLine(UIID_LABEL + 1, 0, 19, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value),
+    UI_LabelLine(UIID_LABEL + 2, 0, 30, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value2),
 };
 
 static unsigned int view_address_button(unsigned int button_mask, unsigned int button_mask_counter) {
     switch (button_mask) {
         case BUTTON_EVT_RELEASED | BUTTON_LEFT | BUTTON_RIGHT:
-            break;
         case BUTTON_EVT_RELEASED | BUTTON_LEFT:
             break;
         case BUTTON_EVT_RELEASED | BUTTON_RIGHT:
             view_idle_show(0);
+            UX_WAIT();
+            app_reply_address();
+            break;
+    }
+    return 0;
+}
+
+static unsigned int view_review_button(unsigned int button_mask, unsigned int button_mask_counter) {
+    switch (button_mask) {
+        case BUTTON_EVT_RELEASED | BUTTON_LEFT | BUTTON_RIGHT:
+            // Press both left and right buttons to quit
+            view_sign_internal_show();
+            break;
+        case BUTTON_EVT_RELEASED | BUTTON_LEFT:
+            // Press left to progress to the previous element
+            h_decrease();
+            if (view_update_review() == TX_NO_MORE_DATA) {
+                view_sign_internal_show();
+            } else {
+                view_review_show();
+            }
+            UX_WAIT();
+            break;
+
+        case BUTTON_EVT_RELEASED | BUTTON_RIGHT:
+            // Press right to progress to the next element
+            h_increase();
+            if (view_update_review() == TX_NO_MORE_DATA) {
+                view_sign_internal_show();
+            } else {
+                view_review_show();
+            }
             UX_WAIT();
             break;
     }
@@ -141,9 +252,9 @@ void view_idle_show(unsigned int ignored) {
 void view_address_show() {
     // Address has been placed in the output buffer
     char *const manAddress = (char *) (G_io_apdu_buffer + 65);
-    snprintf(viewdata.title, MAX_CHARS_PER_TITLE_LINE, "Confirm");
-    snprintf(viewdata.key, MAX_CHARS_PER_KEY_LINE, "your address");
+    snprintf(viewdata.key, MAX_CHARS_PER_KEY_LINE, "Confirm address");
     snprintf(viewdata.value, MAX_CHARS_PER_VALUE_LINE, "%s", manAddress);
+    splitValueField();
 #if defined(TARGET_NANOS)
     UX_DISPLAY(view_address, view_prepro);
 #elif defined(TARGET_NANOX)
@@ -153,4 +264,56 @@ void view_address_show() {
     }
     ux_flow_init(0, ux_addr_flow, NULL);
 #endif
+}
+
+void view_sign_show() {
+#if defined(TARGET_NANOS)
+    h_review(0);
+#elif defined(TARGET_NANOX)
+    view_sign_internal_show();
+#endif
+}
+
+void view_sign_internal_show(void) {
+#if defined(TARGET_NANOS)
+    UX_MENU_DISPLAY(0, menu_sign, NULL);
+#elif defined(TARGET_NANOX)
+    viewdata.idx = -1;
+    if(G_ux.stack_count == 0) {
+        ux_stack_push();
+    }
+    review_state.inside = 0;
+    review_state.no_more_data = 0;
+    ux_flow_init(0, ux_sign_flow, NULL);
+#endif
+}
+
+void view_review_show(void) {
+#if defined(TARGET_NANOS)
+    UX_DISPLAY(view_review, view_prepro);
+#endif
+}
+
+int8_t view_update_review() {
+    int8_t err = TX_NO_ERROR;
+
+    err = transaction_getItem(viewdata.idx,
+                              viewdata.key, MAX_CHARS_PER_KEY_LINE,
+                              viewdata.value, MAX_CHARS_PER_VALUE_LINE,
+                              viewdata.pageIdx, &viewdata.pageCount);
+
+    if (err == TX_NO_MORE_DATA) {
+        return TX_NO_MORE_DATA;
+    }
+
+    if (err != TX_NO_ERROR) {
+        print_key("");
+        print_value("");
+        // TODO: Reject and fail immediately
+        return TX_NO_MORE_DATA;
+    }
+
+    splitValueField();
+
+    return TX_NO_ERROR;
 }

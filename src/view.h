@@ -16,8 +16,12 @@
 ********************************************************************************/
 #pragma once
 
+#include <stdint.h>
+
+#if defined(BOLOS_SDK)
 #include "os.h"
 #include "cx.h"
+#endif
 
 #if defined(TARGET_NANOX)
 #define MAX_CHARS_PER_TITLE_LINE    16
@@ -25,17 +29,23 @@
 #define MAX_CHARS_PER_VALUE_LINE    256
 #define MAX_CHARS_HEXMESSAGE        100
 #else
-#define MAX_CHARS_PER_TITLE_LINE    16
-#define MAX_CHARS_PER_KEY_LINE      32
-#define MAX_CHARS_PER_VALUE_LINE    128
+#define MAX_CHARS_PER_KEY_LINE      (32+1)
+#define MAX_CHARS_PER_VALUE_LINE    (36+1)
+#define MAX_CHARS_PER_VALUE2_LINE   (18+1)
 #define MAX_CHARS_HEXMESSAGE        40
 #endif
 
+#if defined(TARGET_NANOX)
+#define CUR_FLOW G_ux.flow_stack[G_ux.stack_count-1]
+#endif
+
 typedef struct {
-    char title[MAX_CHARS_PER_TITLE_LINE];
     char key[MAX_CHARS_PER_KEY_LINE];
     char value[MAX_CHARS_PER_VALUE_LINE];
+    char value2[MAX_CHARS_PER_VALUE2_LINE];
     int8_t idx;
+    int8_t pageIdx;
+    uint8_t pageCount;
 } view_t;
 
 extern view_t viewdata;
@@ -48,3 +58,11 @@ void view_idle_show(unsigned int ignored);
 
 // shows address in the screen
 void view_address_show();
+
+// Shows review screen + later sign menu
+void view_sign_show();
+
+#define print_title(...) snprintf(viewdata.title, sizeof(viewdata.title), __VA_ARGS__)
+#define print_key(...) snprintf(viewdata.key, sizeof(viewdata.key), __VA_ARGS__);
+#define print_value(...) snprintf(viewdata.value, sizeof(viewdata.value), __VA_ARGS__);
+#define print_value2(...) snprintf(viewdata.value2, sizeof(viewdata.value2), __VA_ARGS__);

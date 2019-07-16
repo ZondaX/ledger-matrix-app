@@ -24,8 +24,6 @@
 #define MAX_DEC_INPUT_SIZE 164
 #define MAX_ENC_INPUT_SIZE 120
 
-#define PRINTF(strbuf, ...)
-
 unsigned char const BASE58TABLE[] = {
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -57,7 +55,6 @@ int decode_base58(const char *in, size_t length,
         return -1;
     }
     MEMMOVE(tmp, in, length);
-    PRINTF("To decode\n%.*H\n", length, tmp);
     for (i = 0; i < length; i++) {
         if (in[i] >= sizeof(BASE58TABLE)) {
             return -1;
@@ -91,12 +88,10 @@ int decode_base58(const char *in, size_t length,
     }
     length = length - (j - zeroCount);
     if (*outlen < length) {
-        PRINTF("Decode overflow %d %d\n", length, *outlen);
         return -1;
     }
 
     MEMMOVE(out, buffer + j - zeroCount, length);
-    PRINTF("Decoded\n%.*H\n", length, out);
     *outlen = length;
     return 0;
 }
@@ -112,9 +107,6 @@ int encode_base58(const unsigned char *in, size_t length,
     if (length > MAX_ENC_INPUT_SIZE) {
         return -1;
     }
-
-    PRINTF("Length to encode %d\n", length);
-    PRINTF("To encode\n%.*H\n", length, in);
 
     while ((zeroCount < length) && (in[zeroCount] == 0)) {
         ++zeroCount;
@@ -153,8 +145,6 @@ int encode_base58(const unsigned char *in, size_t length,
         out[i++] = BASE58ALPHABET[buffer[j++]];
     }
     *outlen = i;
-    PRINTF("Length encoded %d\n", i);
-    PRINTF("Encoded\n%.*H\n", i, out);
     return 0;
 }
 
