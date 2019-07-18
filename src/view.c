@@ -87,12 +87,14 @@ void h_sign_reject(unsigned int _) {
 }
 
 void splitValueField() {
+#if defined(TARGET_NANOS)
     print_value2("");
     uint16_t vlen = strlen(viewdata.value);
     if (vlen > MAX_CHARS_PER_VALUE2_LINE - 1) {
         strcpy(viewdata.value2, viewdata.value + MAX_CHARS_PER_VALUE_LINE);
         viewdata.value[MAX_CHARS_PER_VALUE_LINE] = 0;
     }
+#endif
 }
 
 #if defined(TARGET_NANOX)
@@ -116,13 +118,87 @@ const ux_flow_step_t *const ux_idle_flow [] = {
 };
 
 UX_STEP_NOCB(ux_addr_flow_1_step, bnnn_paging, { .title = viewdata.key, .text = viewdata.value, });
-UX_STEP_VALID(ux_addr_flow_2_step, pb, h_back(), { &C_icon_validate_14, "Back"});
+UX_STEP_VALID(ux_addr_flow_2_step, pb, h_back(), { &C_icon_validate_14, "Ok"});
 
 UX_FLOW(
     ux_addr_flow,
     &ux_addr_flow_1_step,
     &ux_addr_flow_2_step
 );
+
+typedef struct
+{
+unsigned char inside : 1;
+unsigned char no_more_data : 1;
+} review_state_t;
+
+review_state_t review_state;
+
+void h_review_start()
+{
+    if (review_state.inside) {
+    // coming from right
+        viewdata.idx--;
+        if (viewdata.idx<0) {
+            // exit to the left
+            review_state.inside = 0;
+            ux_flow_prev();
+            return;
+        }
+    } else {
+    // coming from left
+        viewdata.idx = 0;
+    }
+
+    view_update_review();
+    ux_flow_next();
+}
+
+void h_review_data()
+{
+    review_state.inside = 1;
+}
+
+void h_review_end()
+{
+    if (review_state.inside) {
+    // coming from left
+        viewdata.idx++;
+        if (view_update_review()== TX_NO_MORE_DATA){
+            review_state.inside = 0;
+            ux_flow_next();
+            return;
+        }
+        ux_layout_bnnn_paging_reset();
+    } else {
+    // coming from right
+        viewdata.idx--;
+        view_update_review();
+    }
+
+    // move to prev flow but trick paging to show first page
+    CUR_FLOW.prev_index = CUR_FLOW.index-2;
+    CUR_FLOW.index--;
+    ux_flow_relayout();
+}
+
+UX_STEP_NOCB(ux_sign_flow_1_step, pbb, { &C_icon_eye, "Review", "Transaction" });
+
+UX_STEP_INIT(ux_sign_flow_2_start_step, NULL, NULL, { h_review_start(); });
+UX_STEP_NOCB_INIT(ux_sign_flow_2_step, bnnn_paging, { h_review_data(); }, { .title = viewdata.key, .text = viewdata.value, });
+UX_STEP_INIT(ux_sign_flow_2_end_step, NULL, NULL, { h_review_end(); });
+
+UX_STEP_VALID(ux_sign_flow_3_step, pbb, h_sign_accept(0), { &C_icon_validate_14, "Sign", "Transaction" });
+UX_STEP_VALID(ux_sign_flow_4_step, pbb, h_sign_reject(0), { &C_icon_crossmark, "Reject", "Transaction" });
+const ux_flow_step_t *const ux_sign_flow[] = {
+  &ux_sign_flow_1_step,
+  &ux_sign_flow_2_start_step,
+  &ux_sign_flow_2_step,
+  &ux_sign_flow_2_end_step,
+  &ux_sign_flow_3_step,
+  &ux_sign_flow_4_step,
+  FLOW_END_STEP,
+};
 
 #else
 

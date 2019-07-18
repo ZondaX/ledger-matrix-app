@@ -25,7 +25,7 @@ include $(BOLOS_SDK)/Makefile.defines
 APPNAME = "MAN"
 APPVERSION_M=0
 APPVERSION_N=0
-APPVERSION_P=12
+APPVERSION_P=13
 
 APP_LOAD_PARAMS = --appFlags 0x200 --delete $(COMMON_LOAD_PARAMS) --path "44'/318'"
 

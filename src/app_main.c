@@ -187,9 +187,6 @@ void handleApdu(volatile uint32_t *flags, volatile uint32_t *tx, uint32_t rx) {
                         THROW(APDU_CODE_DATA_INVALID);
                     }
 
-//                    TODO: preprocess data before showing
-//                    tx_display_index_root();
-
                     view_sign_show();
                     *flags |= IO_ASYNCH_REPLY;
                     break;
