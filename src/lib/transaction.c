@@ -107,7 +107,7 @@ int8_t transaction_getItem(int8_t displayIdx,
         // Append
         uint8_t keyLen = strlen(outKey);
         if (keyLen < outKeyLen) {
-            snprintf(outKey + keyLen, outKeyLen - keyLen, " [%d/%d]", pageIdx, *pageCount);
+            snprintf(outKey + keyLen, outKeyLen - keyLen, " [%d/%d]", pageIdx + 1, *pageCount);
         }
     }
 

@@ -195,7 +195,7 @@ int8_t mantx_print(mantx_context_t *ctx,
                    uint8_t pageIdx, uint8_t *pageCount) {
     MEMSET(out, 0, outLen);
     uint256_t tmp;
-    uint8_t err;
+    uint8_t err = RLP_NO_ERROR;
 
     *pageCount = 1;
 
@@ -203,24 +203,27 @@ int8_t mantx_print(mantx_context_t *ctx,
         case MANTX_FIELD_NONCE: {
             const rlp_field_t *f = ctx->rootFields + fieldIdx;
             err = rlp_readUInt256(data, f, &tmp);
-            if (err != RLP_NO_ERROR) { return err; }
-            if (!tostring256(&tmp, 10, out, outLen)) {
-                return MANTX_ERROR_UNEXPECTED_FIELD;
+            if (err == RLP_NO_ERROR) {
+                if (!tostring256(&tmp, 10, out, outLen)) {
+                    err = MANTX_ERROR_UNEXPECTED_FIELD;
+                }
             }
             break;
         }
         case MANTX_FIELD_GASPRICE: {
             const rlp_field_t *f = ctx->rootFields + fieldIdx;
             err = rlp_readUInt256(data, f, &tmp);
-            if (err != RLP_NO_ERROR) { return err; }
-            tostring256(&tmp, 10, out, outLen);
+            if (err == RLP_NO_ERROR) {
+                tostring256(&tmp, 10, out, outLen);
+            }
             break;
         }
         case MANTX_FIELD_GASLIMIT: {
             const rlp_field_t *f = ctx->rootFields + fieldIdx;
             err = rlp_readUInt256(data, f, &tmp);
-            if (err != RLP_NO_ERROR) { return err; }
-            tostring256(&tmp, 10, out, outLen);
+            if (err == RLP_NO_ERROR) {
+                tostring256(&tmp, 10, out, outLen);
+            }
             break;
         }
         case MANTX_FIELD_TO: {
@@ -230,14 +233,14 @@ int8_t mantx_print(mantx_context_t *ctx,
                 data, f,
                 (char *) out, outLen, &valueLen,
                 pageIdx, pageCount);
-            if (err != RLP_NO_ERROR) { return err; }
             break;
         }
         case MANTX_FIELD_VALUE: {
             const rlp_field_t *f = ctx->rootFields + fieldIdx;
             err = rlp_readUInt256(data, f, &tmp);
-            if (err != RLP_NO_ERROR) { return err; }
-            tostring256(&tmp, 10, out, outLen);
+            if (err == RLP_NO_ERROR) {
+                tostring256(&tmp, 10, out, outLen);
+            }
             break;
         }
         case MANTX_FIELD_DATA: {
@@ -255,7 +258,8 @@ int8_t mantx_print(mantx_context_t *ctx,
                     // ---------------- JSON Payload
                     err = rlp_readStringPaging(
                         data, f,
-                        (char *) out, outLen, &valueLen,
+                        (char *) out, outLen,
+                        &valueLen,
                         pageIdx, pageCount);
                     break;
                 case MANTX_TXTYPE_BROADCAST:
@@ -267,8 +271,10 @@ int8_t mantx_print(mantx_context_t *ctx,
                         (outLen - 1) / 2,  // 2bytes per byte + zero termination
                         &valueLen,
                         pageIdx, pageCount);
-                    // now we need to convert to hexstring in place
-                    convertToHexstringInPlace((uint8_t *) out, valueLen, outLen);
+                    if (err == RLP_NO_ERROR) {
+                        // now we need to convert to hexstring in place
+                        convertToHexstringInPlace((uint8_t *) out, valueLen, outLen);
+                    }
                     break;
                 }
                 default:
@@ -283,8 +289,9 @@ int8_t mantx_print(mantx_context_t *ctx,
             const rlp_field_t *f = ctx->rootFields + fieldIdx;
             uint8_t tmpByte;
             err = rlp_readByte(data, f, &tmpByte);
-            if (err != RLP_NO_ERROR) { return err; }
-            snprintf(out, outLen, "%d", tmpByte);
+            if (err == RLP_NO_ERROR) {
+                snprintf(out, outLen, "%d", tmpByte);
+            }
             break;
         }
         case MANTX_FIELD_R:
@@ -298,32 +305,34 @@ int8_t mantx_print(mantx_context_t *ctx,
         case MANTX_FIELD_ENTERTYPE: {
             const rlp_field_t *f = ctx->rootFields + fieldIdx;
             err = rlp_readUInt256(data, f, &tmp);
-            if (err != RLP_NO_ERROR) { return err; }
-            tostring256(&tmp, 10, out, outLen);
+            if (err == RLP_NO_ERROR) {
+                tostring256(&tmp, 10, out, outLen);
+            }
             break;
         }
         case MANTX_FIELD_ISENTRUSTTX: {
             const rlp_field_t *f = ctx->rootFields + fieldIdx;
             err = rlp_readUInt256(data, f, &tmp);
-            if (err != RLP_NO_ERROR) { return err; }
-            tostring256(&tmp, 10, out, outLen);
+            if (err == RLP_NO_ERROR) {
+                tostring256(&tmp, 10, out, outLen);
+            }
             break;
         }
         case MANTX_FIELD_COMMITTIME: {
             const rlp_field_t *f = ctx->rootFields + fieldIdx;
             err = rlp_readUInt256(data, f, &tmp);
-            if (err != RLP_NO_ERROR) { return err; }
-
-            // this should be limited to uint64_t
-            if (tmp.elements[0].elements[0] != 0 ||
-                tmp.elements[0].elements[1] != 0 ||
-                tmp.elements[1].elements[0] != 0) {
-                return MANTX_ERROR_INVALID_TIME;
+            if (err == RLP_NO_ERROR) {
+                // this should be limited to uint64_t
+                if (tmp.elements[0].elements[0] != 0 ||
+                    tmp.elements[0].elements[1] != 0 ||
+                    tmp.elements[1].elements[0] != 0) {
+                    err = MANTX_ERROR_INVALID_TIME;
+                } else {
+                    // TODO: Implement date conversion
+                    uint64_t t = tmp.elements[1].elements[1] / 1000;
+                    printTime(out, outLen, t);
+                }
             }
-
-            // TODO: Implement date conversion
-            uint64_t t = tmp.elements[1].elements[1] / 1000;
-            printTime(out, outLen, t);
             break;
         }
         case MANTX_FIELD_EXTRATO: {
@@ -334,14 +343,14 @@ int8_t mantx_print(mantx_context_t *ctx,
         case MANTX_FIELD_EXTRATO_TXTYPE: {
             *pageCount = 1;
             err = getDisplayTxExtraToType(out, outLen, ctx->extraToTxType);
-            if (err != RLP_NO_ERROR) { return err; }
             break;
         }
         case MANTX_FIELD_EXTRATO_LOCKHEIGHT: {
             const rlp_field_t *f = ctx->extraToFields + 1;
             err = rlp_readUInt256(data, f, &tmp);
-            if (err != RLP_NO_ERROR) { return err; }
-            tostring256(&tmp, 10, out, outLen);
+            if (err == RLP_NO_ERROR) {
+                tostring256(&tmp, 10, out, outLen);
+            }
             break;
         }
         case MANTX_FIELD_EXTRATO_TO: {
@@ -357,7 +366,12 @@ int8_t mantx_print(mantx_context_t *ctx,
         default:
             return MANTX_ERROR_UNEXPECTED_FIELD;
     }
-    return MANTX_NO_ERROR;
+
+    if (err != MANTX_NO_ERROR) {
+        snprintf(out, outLen, "err %d", err);
+    }
+
+    return err;
 }
 
 uint8_t maxtx_getNumItems(mantx_context_t *ctx) {
@@ -374,7 +388,7 @@ int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data,
     }
 
     if (displayIdx < MANTX_DISPLAY_COUNT) {
-        snprintf(outValue, outValueLen, "some_value");
+        snprintf(outValue, outValueLen, "");
 
         const uint8_t fieldIdx = PIC(displayItemFieldIdxs[displayIdx]);
 

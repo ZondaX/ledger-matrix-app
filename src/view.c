@@ -87,13 +87,11 @@ void h_sign_reject(unsigned int _) {
 }
 
 void splitValueField() {
-    // Split value
     print_value2("");
     uint16_t vlen = strlen(viewdata.value);
-    // TODO: Clean this
-    if (vlen > 17) {
-        strcpy(viewdata.value2, viewdata.value + 17);
-        viewdata.value[17] = 0;
+    if (vlen > MAX_CHARS_PER_VALUE2_LINE - 1) {
+        strcpy(viewdata.value2, viewdata.value + MAX_CHARS_PER_VALUE_LINE);
+        viewdata.value[MAX_CHARS_PER_VALUE_LINE] = 0;
     }
 }
 
@@ -253,7 +251,7 @@ void view_address_show() {
     // Address has been placed in the output buffer
     char *const manAddress = (char *) (G_io_apdu_buffer + 65);
     snprintf(viewdata.key, MAX_CHARS_PER_KEY_LINE, "Confirm address");
-    snprintf(viewdata.value, MAX_CHARS_PER_VALUE_LINE, "%s", manAddress);
+    snprintf(viewdata.value, MAX_CHARS_PER_VALUE1_LINE, "%s", manAddress);
     splitValueField();
 #if defined(TARGET_NANOS)
     UX_DISPLAY(view_address, view_prepro);
@@ -299,7 +297,7 @@ int8_t view_update_review() {
 
     err = transaction_getItem(viewdata.idx,
                               viewdata.key, MAX_CHARS_PER_KEY_LINE,
-                              viewdata.value, MAX_CHARS_PER_VALUE_LINE,
+                              viewdata.value, MAX_CHARS_PER_VALUE1_LINE,
                               viewdata.pageIdx, &viewdata.pageCount);
 
     if (err == TX_NO_MORE_DATA) {

@@ -327,11 +327,53 @@ void printTime(char *out, uint16_t outLen, uint64_t t) {
     }
     tm_mon++;
 
+    char *monthName;
+    switch (tm_mon) {
+        case 1:
+            monthName = "Jan";
+            break;
+        case 2:
+            monthName = "Feb";
+            break;
+        case 3:
+            monthName = "Mar";
+            break;
+        case 4:
+            monthName = "Apr";
+            break;
+        case 5:
+            monthName = "May";
+            break;
+        case 6:
+            monthName = "Jun";
+            break;
+        case 7:
+            monthName = "Jul";
+            break;
+        case 8:
+            monthName = "Aug";
+            break;
+        case 9:
+            monthName = "Sep";
+            break;
+        case 10:
+            monthName = "Oct";
+            break;
+        case 11:
+            monthName = "Nov";
+            break;
+        case 12:
+            monthName = "Dec";
+            break;
+        default:
+            monthName = "ERR";
+    }
+
     // YYYYmmdd HH:MM:SS
-    snprintf(out, outLen, "%04d%02d%02d %02d:%02d:%02d",
-             tm_year,
-             tm_mon,
+    snprintf(out, outLen, "%02d%s%04d %02d:%02d:%02d",
              tm_day,
+             monthName,
+             tm_year,
              tm_hour, tm_min, tm_sec
     );
 }
