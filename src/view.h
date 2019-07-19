@@ -20,42 +20,11 @@
 
 #if defined(LEDGER_SPECIFIC)
 #include "bolos_target.h"
-#endif
-
 #if defined(BOLOS_SDK)
 #include "os.h"
 #include "cx.h"
 #endif
-
-#if defined(TARGET_NANOX)
-#define MAX_CHARS_PER_TITLE_LINE    16
-#define MAX_CHARS_PER_KEY_LINE      64
-#define MAX_CHARS_PER_VALUE1_LINE    256
-#define MAX_CHARS_HEXMESSAGE        100
-#else
-#define MAX_CHARS_PER_KEY_LINE      (32+1)
-#define MAX_CHARS_PER_VALUE_LINE    (18)
-#define MAX_CHARS_PER_VALUE1_LINE   (2*MAX_CHARS_PER_VALUE_LINE+1)
-#define MAX_CHARS_PER_VALUE2_LINE   (MAX_CHARS_PER_VALUE_LINE+1)
-#define MAX_CHARS_HEXMESSAGE        40
 #endif
-
-#if defined(TARGET_NANOX)
-#define CUR_FLOW G_ux.flow_stack[G_ux.stack_count-1]
-#endif
-
-typedef struct {
-    char key[MAX_CHARS_PER_KEY_LINE];
-    char value[MAX_CHARS_PER_VALUE1_LINE];
-#if defined(TARGET_NANOS)
-    char value2[MAX_CHARS_PER_VALUE2_LINE];
-#endif
-    int8_t idx;
-    int8_t pageIdx;
-    uint8_t pageCount;
-} view_t;
-
-extern view_t viewdata;
 
 /// view_init (initializes UI)
 void view_init();
@@ -68,15 +37,3 @@ void view_address_show();
 
 // Shows review screen + later sign menu
 void view_sign_show();
-
-#define print_title(...) snprintf(viewdata.title, sizeof(viewdata.title), __VA_ARGS__)
-#define print_key(...) snprintf(viewdata.key, sizeof(viewdata.key), __VA_ARGS__);
-#define print_value(...) snprintf(viewdata.value, sizeof(viewdata.value), __VA_ARGS__);
-
-#if defined(TARGET_NANOS)
-#define print_value2(...) snprintf(viewdata.value2, sizeof(viewdata.value2), __VA_ARGS__);
-#endif
-
-#if defined(TARGET_NANOX)
-#define CUR_FLOW G_ux.flow_stack[G_ux.stack_count-1]
-#endif
