@@ -23,8 +23,8 @@ extern "C" {
 #endif
 
 #define MANTX_ROOTFIELD_COUNT 13
-#define MANTX_EXTRATOFIELD_COUNT 3
-#define MANTX_EXTRATOLISTFIELD_COUNT 10
+#define MANTX_EXTRAFIELD_COUNT 3
+#define MANTX_EXTRALISTFIELD_COUNT 10
 
 /////////////// ERRORS
 #define MANTX_NO_ERROR 0
@@ -35,6 +35,7 @@ extern "C" {
 #define MANTX_ERROR_UNEXPECTED_DISPLAY_IDX -5
 #define MANTX_ERROR_INVALID_TIME -6
 #define MANTX_ERROR_INVALID_TXTYPE -7
+#define MANTX_ERROR_EXTRATO_TOO_MANY -8
 
 /////////////// TX TYPES
 #define MANTX_TXTYPE_NORMAL             0
@@ -69,21 +70,21 @@ extern "C" {
 #define MANTX_FIELD_ENTERTYPE    9
 #define MANTX_FIELD_ISENTRUSTTX  10
 #define MANTX_FIELD_COMMITTIME   11
-#define MANTX_FIELD_EXTRATO      12     // This field is a list so it is not shown
+#define MANTX_FIELD_EXTRA        12     // This field is a list so it is not shown
 
 // These field may or may not be available
-#define MANTX_FIELD_EXTRATO_TXTYPE  13
-#define MANTX_FIELD_EXTRATO_LOCKHEIGHT  14
-#define MANTX_FIELD_EXTRATO_TO          15
+#define MANTX_FIELD_EXTRA_TXTYPE  13
+#define MANTX_FIELD_EXTRA_LOCKHEIGHT  14
+#define MANTX_FIELD_EXTRA_TO          15
 
 #define MANTX_DISPLAY_COUNT 12
 
 typedef struct {
     rlp_field_t root;
     rlp_field_t rootFields[MANTX_ROOTFIELD_COUNT];
-    rlp_field_t extraToFields[MANTX_EXTRATOFIELD_COUNT];
-    rlp_field_t extraToListFields[MANTX_EXTRATOLISTFIELD_COUNT];
-    uint8_t extraToTxType;
+    rlp_field_t extraFields[MANTX_EXTRAFIELD_COUNT];
+    rlp_field_t extraToListFields[MANTX_EXTRALISTFIELD_COUNT];
+    uint8_t extraTxType;
     uint16_t extraToListCount;
     uint8_t JsonCount;
 } mantx_context_t;

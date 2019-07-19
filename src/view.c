@@ -96,14 +96,20 @@ inline void splitValueField() {
 int8_t h_review_update_data() {
     int8_t err = TX_NO_ERROR;
 
-    err = transaction_getItem(viewdata.idx,
-                              viewdata.key, MAX_CHARS_PER_KEY_LINE,
-                              viewdata.value, MAX_CHARS_PER_VALUE1_LINE,
-                              viewdata.pageIdx, &viewdata.pageCount);
+    do {
+        err = transaction_getItem(viewdata.idx,
+                                  viewdata.key, MAX_CHARS_PER_KEY_LINE,
+                                  viewdata.value, MAX_CHARS_PER_VALUE1_LINE,
+                                  viewdata.pageIdx, &viewdata.pageCount);
 
-    if (err == TX_NO_MORE_DATA) {
-        return TX_NO_MORE_DATA;
-    }
+        if (err == TX_NO_MORE_DATA) {
+            return TX_NO_MORE_DATA;
+        }
+
+        if (viewdata.pageCount == 0) {
+            h_review_increase();
+        }
+    } while(viewdata.pageCount == 0);
 
     if (err != TX_NO_ERROR) {
         print_key("Error");

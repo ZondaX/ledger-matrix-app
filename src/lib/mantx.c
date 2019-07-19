@@ -33,9 +33,9 @@ const uint8_t displayItemFieldIdxs[] = {
     MANTX_FIELD_ENTERTYPE,
     MANTX_FIELD_ISENTRUSTTX,
     MANTX_FIELD_COMMITTIME,
-//    MANTX_FIELD_EXTRATO,
-    MANTX_FIELD_EXTRATO_TXTYPE,
-    MANTX_FIELD_EXTRATO_LOCKHEIGHT,
+//    MANTX_FIELD_EXTRA,
+    MANTX_FIELD_EXTRA_TXTYPE,
+    MANTX_FIELD_EXTRA_LOCKHEIGHT,
 };
 
 int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
@@ -55,50 +55,53 @@ int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
     if (fieldCount != MANTX_ROOTFIELD_COUNT)
         return MANTX_ERROR_UNEXPECTED_FIELD_COUNT;
 
-    // Now parse the extraTo field
-    const rlp_field_t *extraToField = &ctx->rootFields[MANTX_FIELD_EXTRATO];
-    rlp_field_t extraToFieldInternal;
+    ////////// EXTRA
+    // Now parse the extra field
+    const rlp_field_t *extraField = &ctx->rootFields[MANTX_FIELD_EXTRA];
+    rlp_field_t extraFieldInternal;
     err = rlp_readList(data,
-                       extraToField,
-                       &extraToFieldInternal,
+                       extraField,
+                       &extraFieldInternal,
                        1, &fieldCount);
     if (err != MANTX_NO_ERROR)
         return err;
     if (fieldCount != 1)
         return MANTX_ERROR_UNEXPECTED_FIELD_COUNT;
-    if (extraToFieldInternal.kind != RLP_KIND_LIST)
+    if (extraFieldInternal.kind != RLP_KIND_LIST)
         return MANTX_ERROR_UNEXPECTED_FIELD_TYPE;
 
-    // Now parse the extraToInternal field
+    // Now parse the extraInternal field
     err = rlp_readList(data,
-                       &extraToFieldInternal,
-                       ctx->extraToFields,
-                       MANTX_EXTRATOFIELD_COUNT, &fieldCount);
+                       &extraFieldInternal,
+                       ctx->extraFields,
+                       MANTX_EXTRAFIELD_COUNT, &fieldCount);
 
     if (err != MANTX_NO_ERROR) {
         return err;
     }
-
-    if (fieldCount != MANTX_EXTRATOFIELD_COUNT)
+    if (fieldCount != MANTX_EXTRAFIELD_COUNT)
         return MANTX_ERROR_UNEXPECTED_FIELD_COUNT;
 
-    // Extract extrato txType and cache it as metadata
-    const rlp_field_t *f = ctx->extraToFields;
+    // Extract extra txType and cache it as metadata
+    const rlp_field_t *f = ctx->extraFields;
     uint256_t tmp;
     err = rlp_readUInt256(data, f, &tmp);
     if (err != RLP_NO_ERROR) { return err; }
-    ctx->extraToTxType = tmp.elements[1].elements[1];   // extract last byte
+    ctx->extraTxType = tmp.elements[1].elements[1];   // extract last byte
 
-    // TODO: Extract number of elements in ExtraTo Field 2
-    f = ctx->extraToFields + 2;
+    //////////
+    ////////// EXTRA TO
+    //////////
+    // TODO: Extract number of elements in Extra Field 2
+    f = ctx->extraFields + 2;
     err = rlp_readList(data, f,
                        ctx->extraToListFields,
-                       MANTX_EXTRATOLISTFIELD_COUNT,
+                       MANTX_EXTRALISTFIELD_COUNT,
                        &ctx->extraToListCount);
     if (err != MANTX_NO_ERROR)
         return err;
-
-    // FIXME: Each item should be 3 items??
+    // Get each extraTo item is a stream of 3 elements (recipient, amount, payload)
+    // To avoid using too much memory, we can parse them on demand
 
     // TODO: Parse JSON and estimate number of pages for variable fields
     ctx->JsonCount = 0;
@@ -129,7 +132,7 @@ const char *getError(int8_t errorCode) {
     }
 }
 
-uint8_t getDisplayTxExtraToType(char *out, uint16_t outLen, uint8_t txtype) {
+uint8_t getDisplayTxExtraType(char *out, uint16_t outLen, uint8_t txtype) {
     switch (txtype) {
         case MANTX_TXTYPE_NORMAL:
             snprintf(out, outLen, "Normal");
@@ -247,7 +250,7 @@ int8_t mantx_print(mantx_context_t *ctx,
             const rlp_field_t *f = ctx->rootFields + fieldIdx;
             uint16_t valueLen;
 
-            switch (ctx->extraToTxType) {
+            switch (ctx->extraTxType) {
                 case MANTX_TXTYPE_NORMAL:
                     // ---------------- NO DATA FIELD
                     *pageCount = 0;
@@ -334,32 +337,22 @@ int8_t mantx_print(mantx_context_t *ctx,
             }
             break;
         }
-        case MANTX_FIELD_EXTRATO: {
+        case MANTX_FIELD_EXTRA: {
             // empty response
             *pageCount = 0;
             break;
         }
-        case MANTX_FIELD_EXTRATO_TXTYPE: {
+        case MANTX_FIELD_EXTRA_TXTYPE: {
             *pageCount = 1;
-            err = getDisplayTxExtraToType(out, outLen, ctx->extraToTxType);
+            err = getDisplayTxExtraType(out, outLen, ctx->extraTxType);
             break;
         }
-        case MANTX_FIELD_EXTRATO_LOCKHEIGHT: {
-            const rlp_field_t *f = ctx->extraToFields + 1;
+        case MANTX_FIELD_EXTRA_LOCKHEIGHT: {
+            const rlp_field_t *f = ctx->extraFields + 1;
             err = rlp_readUInt256(data, f, &tmp);
             if (err == RLP_NO_ERROR) {
                 tostring256(&tmp, 10, out, outLen);
             }
-            break;
-        }
-        case MANTX_FIELD_EXTRATO_TO: {
-            // empty response
-            *pageCount = 0;
-            // This is actually dynamic and there is another internal list
-            // FIXME: ???????
-//            const rlp_field_t *f = ctx->extraToFields + 2;
-//            rlp_readUInt256(data, f, &tmp);
-//            tostring256(&tmp, 10, out, outLen);
             break;
         }
         default:
@@ -422,10 +415,10 @@ int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data,
             case MANTX_FIELD_COMMITTIME:
                 snprintf(outKey, outKeyLen, "CommitTime");
                 break;
-            case MANTX_FIELD_EXTRATO_TXTYPE:
+            case MANTX_FIELD_EXTRA_TXTYPE:
                 snprintf(outKey, outKeyLen, "TxType");
                 break;
-            case MANTX_FIELD_EXTRATO_LOCKHEIGHT:
+            case MANTX_FIELD_EXTRA_LOCKHEIGHT:
                 snprintf(outKey, outKeyLen, "Lock Height");
                 break;
             default:
@@ -440,9 +433,55 @@ int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data,
         return err;
     }
 
-    if (displayIdx < MANTX_DISPLAY_COUNT + ctx->extraToListCount) {
-        // TODO: return extraToData
-        return MANTX_NO_ERROR;
+    if (displayIdx < MANTX_DISPLAY_COUNT + ctx->extraToListCount * 3) {
+        uint8_t extraToIdx = (displayIdx - MANTX_DISPLAY_COUNT) / 3;
+        uint8_t fieldIdx = (displayIdx - MANTX_DISPLAY_COUNT) % 3;
+
+        // Read the stream of three items
+        const rlp_field_t *f = &ctx->extraToListFields[extraToIdx];
+        rlp_field_t extraToFields[3];
+        uint16_t fieldCount;
+        int8_t err = rlp_readList(data, f, extraToFields, MANTX_ROOTFIELD_COUNT, &fieldCount);
+        if (err != MANTX_NO_ERROR)
+            return err;
+        if (fieldCount != 3)
+            return MANTX_ERROR_UNEXPECTED_FIELD_COUNT;
+
+        uint16_t valueLen;
+        switch (fieldIdx) {
+            case 0: {
+                snprintf(outKey, outKeyLen, "[%d] To", extraToIdx);
+                err = rlp_readStringPaging(
+                    data, extraToFields + 0,
+                    (char *) outValue, outValueLen, &valueLen,
+                    pageIdx, pageCount);
+                break;
+            }
+            case 1: {
+                uint256_t tmp;
+                snprintf(outKey, outKeyLen, "[%d] Amount", extraToIdx);
+                rlp_readUInt256(data, extraToFields + 1, &tmp);
+                tostring256(&tmp, 10, outValue, outValueLen);
+                break;
+            }
+            case 2: {
+                snprintf(outKey, outKeyLen, "[%d] Payload", extraToIdx);
+                // ----------------- HEX payload
+                err = rlp_readStringPaging(data, extraToFields + 2,
+                                           (char *) outValue,
+                                           (outValueLen - 1) / 2,  // 2bytes per byte + zero termination
+                                           &valueLen,
+                                           pageIdx, pageCount);
+                //snprintf(out, outLen, "%d - err %d", valueLen, err);
+                if (err == RLP_NO_ERROR) {
+                    // now we need to convert to hexstring in place
+                    convertToHexstringInPlace((uint8_t *) outValue, valueLen, outValueLen);
+                }
+                break;
+            }
+        }
+
+        return err;
     }
 
     if (displayIdx < MANTX_DISPLAY_COUNT + ctx->extraToListCount + ctx->JsonCount) {
