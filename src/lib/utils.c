@@ -26,7 +26,7 @@ uint8_t hexdigit(uint8_t v) {
 }
 
 // Converts data bytes into a hexstring !! IN PLACE !!
-uint8_t convertToHexstringInPlace(uint8_t *data, uint16_t dataLen, uint8_t dataLenMax) {
+uint8_t convertToHexstringInPlace(uint8_t *data, uint16_t dataLen, uint16_t dataLenMax) {
     if (dataLen == 0) {
         return UTILS_NOT_ENOUGH_DATA;
     }
