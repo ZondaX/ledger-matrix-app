@@ -26,7 +26,7 @@ extern "C" {
 #define UTILS_NOT_ENOUGH_DATA -1
 
 // Converts data bytes into a hexstring !! IN PLACE !!
-uint8_t convertToHexstringInPlace(uint8_t *data, uint16_t dataLen, uint8_t dataLenMax);
+uint8_t convertToHexstringInPlace(uint8_t *data, uint16_t dataLen, uint16_t dataLenMax);
 
 void printTime(char *out, uint16_t outLen, uint64_t t);
 

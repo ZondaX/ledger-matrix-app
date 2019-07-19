@@ -256,21 +256,20 @@ int8_t mantx_print(mantx_context_t *ctx,
                 case MANTX_TXTYPE_REVOCABLE:
                 case MANTX_TXTYPE_AUTHORIZED:
                     // ---------------- JSON Payload
-                    err = rlp_readStringPaging(
-                        data, f,
-                        (char *) out, outLen,
-                        &valueLen,
-                        pageIdx, pageCount);
+                    err = rlp_readStringPaging(data, f,
+                                               (char *) out, outLen,
+                                               &valueLen,
+                                               pageIdx, pageCount);
                     break;
                 case MANTX_TXTYPE_BROADCAST:
                 case MANTX_TXTYPE_REVERT: {
                     // ----------------- HEX payload
-                    err = rlp_readStringPaging(
-                        data, f,
-                        (char *) out,
-                        (outLen - 1) / 2,  // 2bytes per byte + zero termination
-                        &valueLen,
-                        pageIdx, pageCount);
+                    err = rlp_readStringPaging(data, f,
+                                               (char *) out,
+                                               (outLen - 1) / 2,  // 2bytes per byte + zero termination
+                                               &valueLen,
+                                               pageIdx, pageCount);
+                    //snprintf(out, outLen, "%d - err %d", valueLen, err);
                     if (err == RLP_NO_ERROR) {
                         // now we need to convert to hexstring in place
                         convertToHexstringInPlace((uint8_t *) out, valueLen, outLen);
