@@ -25,7 +25,7 @@ include $(BOLOS_SDK)/Makefile.defines
 APPNAME = "MAN"
 APPVERSION_M=0
 APPVERSION_N=1
-APPVERSION_P=0
+APPVERSION_P=1
 
 APP_LOAD_PARAMS = --appFlags 0x200 --delete $(COMMON_LOAD_PARAMS) --path "44'/318'"
 
@@ -126,7 +126,7 @@ LDLIBS   += -lm -lgcc -lc
 ##########################
 include $(BOLOS_SDK)/Makefile.glyphs
 
-APP_SOURCE_PATH += src deps/jsmn/src deps/ledger-zxlib/include deps/ledger-zxlib/src
+APP_SOURCE_PATH += src deps/ledger-zxlib/include deps/ledger-zxlib/src
 SDK_SOURCE_PATH += lib_stusb lib_u2f lib_stusb_impl
 
 ifeq ($(TARGET_NAME),TARGET_NANOX)

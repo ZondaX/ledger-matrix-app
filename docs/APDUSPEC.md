@@ -96,7 +96,7 @@ The general structure of commands and responses is as follows:
 
 | Field | Type     | Content                | Expected  |
 | ----- | -------- | ---------------------- | --------- |
-| CLA   | byte (1) | Application Identifier | 0x55      |
+| CLA   | byte (1) | Application Identifier | 0x88      |
 | INS   | byte (1) | Instruction ID         | 0x02      |
 | P1    | byte (1) | Packet Current Index   |           |
 | P2    | byte (1) | Packet Total Count     |
