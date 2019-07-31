@@ -39,6 +39,7 @@ uint8_t app_sign() {
 #define SIG_R 1
 #define SIG_S (SIG_R+32)
 #define TEMP_SIZE   (IO_APDU_BUFFER_SIZE - DER_OFFSET)
+#define HASH_SIZE 32
 
     uint8_t *der_signature = G_io_apdu_buffer + DER_OFFSET;
 
@@ -58,8 +59,8 @@ uint8_t app_sign() {
     const uint8_t *message = transaction_get_buffer();
     const uint16_t messageLength = transaction_get_buffer_length();
 
-    uint8_t messageDigest[CX_SHA256_SIZE];
-    cx_hash_sha256(message, messageLength, messageDigest, CX_SHA256_SIZE);
+    uint8_t messageDigest[HASH_SIZE];
+    keccak(messageDigest, HASH_SIZE, message, messageLength);
 
     // Sign
     unsigned int info = 0;
@@ -67,7 +68,7 @@ uint8_t app_sign() {
                                               CX_RND_RFC6979 | CX_LAST,
                                               CX_SHA256,
                                               messageDigest,
-                                              CX_SHA256_SIZE,
+                                              HASH_SIZE,
                                               der_signature,
                                               TEMP_SIZE,
                                               &info);
