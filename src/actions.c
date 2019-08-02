@@ -60,7 +60,7 @@ uint8_t app_sign() {
     const uint16_t messageLength = transaction_get_buffer_length();
 
     uint8_t messageDigest[HASH_SIZE];
-    keccak(messageDigest, HASH_SIZE, message, messageLength);
+    keccak(messageDigest, HASH_SIZE, (uint8_t *) message, messageLength);
 
     // Sign
     unsigned int info = 0;
