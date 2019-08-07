@@ -78,11 +78,9 @@ const char *transaction_parse() {
         transaction_get_buffer_length());
 
     if (err != MANTX_NO_ERROR) {
-        // TODO: convert to error string
-        return "ERROR"; // error_msg;
+        return getError(err);
     }
 
-    // TODO: Validate values?
     return NULL;
 }
 

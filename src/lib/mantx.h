@@ -45,8 +45,6 @@ extern "C" {
 #define MANTX_TXTYPE_REVERT             4
 #define MANTX_TXTYPE_AUTHORIZED         5
 #define MANTX_TXTYPE_CANCEL_AUTH        6
-#define MANTX_TXTYPE_FIXME1             7  // FIXME: ????????
-#define MANTX_TXTYPE_FIXME2             8  // FIXME: ????????
 #define MANTX_TXTYPE_CREATE_CURR        9
 #define MANTX_TXTYPE_VERIF_REWARD       10
 #define MANTX_TXTYPE_INTEREST_REWARD    11

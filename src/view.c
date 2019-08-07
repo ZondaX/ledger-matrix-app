@@ -114,8 +114,7 @@ int8_t h_review_update_data() {
     if (err != TX_NO_ERROR) {
         print_key("Error");
         print_value("%d", err);
-        // TODO: Reject and fail immediately
-        return TX_NO_ERROR;
+        return err;
     }
 
     splitValueField();

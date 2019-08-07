@@ -92,7 +92,6 @@ int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
     //////////
     ////////// EXTRA TO
     //////////
-    // TODO: Extract number of elements in Extra Field 2
     f = ctx->extraFields + 2;
     err = rlp_readList(data, f,
                        ctx->extraToListFields,
@@ -103,7 +102,6 @@ int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
     // Get each extraTo item is a stream of 3 elements (recipient, amount, payload)
     // To avoid using too much memory, we can parse them on demand
 
-    // TODO: Parse JSON and estimate number of pages for variable fields
     ctx->JsonCount = 0;
 
     return MANTX_NO_ERROR;
@@ -155,14 +153,6 @@ uint8_t getDisplayTxExtraType(char *out, uint16_t outLen, uint8_t txtype) {
         case MANTX_TXTYPE_CANCEL_AUTH:
             snprintf(out, outLen, "Cancel Auth");
             break;
-//        case MANTX_TXTYPE_FIXME1:
-//            // FIXME: ????????
-//            snprintf(out, outLen, "%d Normal");
-//            break;
-//        case MANTX_TXTYPE_FIXME2:
-//            // FIXME: ????????
-//            snprintf(out, outLen, "%d Normal");
-//            break;
         case MANTX_TXTYPE_CREATE_CURR:
             snprintf(out, outLen, "Create curr");
             break;
@@ -330,8 +320,7 @@ int8_t mantx_print(mantx_context_t *ctx,
                     tmp.elements[1].elements[0] != 0) {
                     err = MANTX_ERROR_INVALID_TIME;
                 } else {
-                    // TODO: Implement date conversion
-                    uint64_t t = tmp.elements[1].elements[1] / 1000;
+                    uint64_t t = tmp.elements[1].elements[1];
                     printTime(out, outLen, t);
                 }
             }
@@ -380,7 +369,7 @@ int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data,
     }
 
     if (displayIdx < MANTX_DISPLAY_COUNT) {
-        snprintf(outValue, outValueLen, "");
+        snprintf(outValue, outValueLen, " ");
 
         const uint8_t fieldIdx = PIC(displayItemFieldIdxs[displayIdx]);
 
@@ -485,7 +474,6 @@ int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data,
     }
 
     if (displayIdx < MANTX_DISPLAY_COUNT + ctx->extraToListCount + ctx->JsonCount) {
-        // TODO: return JSON data fields
         return MANTX_NO_ERROR;
     }
 

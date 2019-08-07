@@ -285,14 +285,13 @@ const uint32_t yearLookup[] = {
 // ARM does not implement gmtime. This is a simple alternative implementation
 // based on section 4.16
 // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html
-void printTime(char *out, uint16_t outLen, uint32_t t) {
+void printTime(char *out, uint16_t outLen, uint64_t t) {
     uint8_t tm_sec = 0;
     uint8_t tm_min = 0;
     uint8_t tm_hour = 0;
     uint8_t tm_day = 0;
     uint8_t tm_mon = 0;
     uint16_t tm_year = 0;
-    uint32_t tmp;
 
     tm_sec = t % 60;
     t -= tm_sec;

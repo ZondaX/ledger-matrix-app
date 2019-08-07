@@ -23,8 +23,6 @@ int16_t rlp_decode(
     uint16_t *len,
     uint16_t *valueOffset) {
 
-    // TODO: Do not allow uint64 lengths
-
     uint8_t p = *data;
     if (p >= 0 && p <= 0x7F) {
         *kind = RLP_KIND_BYTE;
