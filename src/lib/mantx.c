@@ -89,6 +89,12 @@ int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen) {
     if (err != RLP_NO_ERROR) { return err; }
     ctx->extraTxType = tmp.elements[1].elements[1];   // extract last byte
 
+    // Validate txtype
+    char tmpBuf[2] = {0, 0};
+    err = getDisplayTxExtraType(tmpBuf, 2, ctx->extraTxType);
+    if (err != MANTX_NO_ERROR)
+        return err;
+
     //////////
     ////////// EXTRA TO
     //////////
@@ -120,9 +126,7 @@ const char *getError(int8_t errorCode) {
         case MANTX_ERROR_UNEXPECTED_DISPLAY_IDX:
             return "Unexpected display idx";
         case MANTX_ERROR_INVALID_TIME:
-            return "Invalid TxType";
-        case MANTX_ERROR_INVALID_TXTYPE:
-            return "";
+            return "Unsupported TxType";
         case MANTX_NO_ERROR:
             return "No error";
         default:
@@ -141,8 +145,8 @@ uint8_t getDisplayTxExtraType(char *out, uint16_t outLen, uint8_t txtype) {
         case MANTX_TXTYPE_MINER_REWARD:
             snprintf(out, outLen, "Miner reward");
             break;
-        case MANTX_TXTYPE_REVOCABLE:
-            snprintf(out, outLen, "Revocable");
+        case MANTX_TXTYPE_SCHEDULED:
+            snprintf(out, outLen, "Scheduled");
             break;
         case MANTX_TXTYPE_REVERT:
             snprintf(out, outLen, "Revert");
@@ -246,7 +250,7 @@ int8_t mantx_print(mantx_context_t *ctx,
                     *pageCount = 0;
                     err = RLP_NO_ERROR;
                     break;
-                case MANTX_TXTYPE_REVOCABLE:
+                case MANTX_TXTYPE_SCHEDULED:
                 case MANTX_TXTYPE_AUTHORIZED:
                     // ---------------- JSON Payload
                     err = rlp_readStringPaging(data, f,
@@ -254,6 +258,18 @@ int8_t mantx_print(mantx_context_t *ctx,
                                                &valueLen,
                                                pageIdx, pageCount);
                     break;
+                // TODO: confirm tx types
+                case MANTX_TXTYPE_MINER_REWARD:
+                case MANTX_TXTYPE_CANCEL_AUTH:
+                case MANTX_TXTYPE_CREATE_CURR:
+                case MANTX_TXTYPE_VERIF_REWARD:
+                case MANTX_TXTYPE_INTEREST_REWARD:
+                case MANTX_TXTYPE_TXFEE_REWARD:
+                case MANTX_TXTYPE_LOTTERY_REWARD:
+                case MANTX_TXTYPE_SET_BLACKLIST:
+                case MANTX_TXTYPE_SUPERBLOCK:
+
+
                 case MANTX_TXTYPE_BROADCAST:
                 case MANTX_TXTYPE_REVERT: {
                     // ----------------- HEX payload

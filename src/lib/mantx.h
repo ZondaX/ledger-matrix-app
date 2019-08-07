@@ -41,7 +41,7 @@ extern "C" {
 #define MANTX_TXTYPE_NORMAL             0
 #define MANTX_TXTYPE_BROADCAST          1
 #define MANTX_TXTYPE_MINER_REWARD       2
-#define MANTX_TXTYPE_REVOCABLE          3
+#define MANTX_TXTYPE_SCHEDULED          3
 #define MANTX_TXTYPE_REVERT             4
 #define MANTX_TXTYPE_AUTHORIZED         5
 #define MANTX_TXTYPE_CANCEL_AUTH        6
@@ -90,7 +90,9 @@ typedef struct {
 // parse and check a tx buffer
 int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen);
 
-const char *maxtx_getDisplayName(uint8_t displayIndex);
+const char *getError(int8_t errorCode);
+
+uint8_t getDisplayTxExtraType(char *out, uint16_t outLen, uint8_t txtype);
 
 // get a readable output for each field
 int8_t mantx_print(mantx_context_t *ctx, uint8_t *data,
