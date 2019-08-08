@@ -139,12 +139,12 @@ uint8_t getDisplayTxExtraType(char *out, uint16_t outLen, uint8_t txtype) {
         case MANTX_TXTYPE_NORMAL:
             snprintf(out, outLen, "Normal");
             break;
-        case MANTX_TXTYPE_BROADCAST:
-            snprintf(out, outLen, "Broadcast");
-            break;
-        case MANTX_TXTYPE_MINER_REWARD:
-            snprintf(out, outLen, "Miner reward");
-            break;
+//        case MANTX_TXTYPE_BROADCAST:
+//            snprintf(out, outLen, "Broadcast");
+//            break;
+//        case MANTX_TXTYPE_MINER_REWARD:
+//            snprintf(out, outLen, "Miner reward");
+//            break;
         case MANTX_TXTYPE_SCHEDULED:
             snprintf(out, outLen, "Scheduled");
             break;
@@ -160,24 +160,24 @@ uint8_t getDisplayTxExtraType(char *out, uint16_t outLen, uint8_t txtype) {
         case MANTX_TXTYPE_CREATE_CURR:
             snprintf(out, outLen, "Create curr");
             break;
-        case MANTX_TXTYPE_VERIF_REWARD:
-            snprintf(out, outLen, "Verif reward");
-            break;
-        case MANTX_TXTYPE_INTEREST_REWARD:
-            snprintf(out, outLen, "Interest reward");
-            break;
-        case MANTX_TXTYPE_TXFEE_REWARD:
-            snprintf(out, outLen, "Tx Fee reward");
-            break;
-        case MANTX_TXTYPE_LOTTERY_REWARD:
-            snprintf(out, outLen, "Lottery reward");
-            break;
-        case MANTX_TXTYPE_SET_BLACKLIST:
-            snprintf(out, outLen, "Set blacklist");
-            break;
-        case MANTX_TXTYPE_SUPERBLOCK:
-            snprintf(out, outLen, "Super block");
-            break;
+//        case MANTX_TXTYPE_VERIF_REWARD:
+//            snprintf(out, outLen, "Verif reward");
+//            break;
+//        case MANTX_TXTYPE_INTEREST_REWARD:
+//            snprintf(out, outLen, "Interest reward");
+//            break;
+//        case MANTX_TXTYPE_TXFEE_REWARD:
+//            snprintf(out, outLen, "Tx Fee reward");
+//            break;
+//        case MANTX_TXTYPE_LOTTERY_REWARD:
+//            snprintf(out, outLen, "Lottery reward");
+//            break;
+//        case MANTX_TXTYPE_SET_BLACKLIST:
+//            snprintf(out, outLen, "Set blacklist");
+//            break;
+//        case MANTX_TXTYPE_SUPERBLOCK:
+//            snprintf(out, outLen, "Super block");
+//            break;
         default:
             return MANTX_ERROR_INVALID_TXTYPE;
     }
@@ -246,31 +246,36 @@ int8_t mantx_print(mantx_context_t *ctx,
 
             switch (ctx->extraTxType) {
                 case MANTX_TXTYPE_NORMAL:
-                    // ---------------- NO DATA FIELD
-                    *pageCount = 0;
-                    err = RLP_NO_ERROR;
+                case MANTX_TXTYPE_SCHEDULED: {
+                    // ---------------- Optional DATA FIELD. Show hex if there is data
+                    err = rlp_readStringPaging(data, f,
+                                               (char *) out,
+                                               (outLen - 1) / 2,  // 2bytes per byte + zero termination
+                                               &valueLen,
+                                               pageIdx, pageCount);
+                    //snprintf(out, outLen, "%d - err %d", valueLen, err);
+                    if (err == RLP_NO_ERROR) {
+                        if (valueLen > 0)  {
+                            // now we need to convert to hexstring in place
+                            convertToHexstringInPlace((uint8_t *) out, valueLen, outLen);
+                        } else {
+                            *pageCount = 0;
+                            err = RLP_NO_ERROR;
+                            break;
+                        }
+                    }
                     break;
-                case MANTX_TXTYPE_SCHEDULED:
+                }
+
                 case MANTX_TXTYPE_AUTHORIZED:
+                case MANTX_TXTYPE_CREATE_CURR:
+                case MANTX_TXTYPE_CANCEL_AUTH:
                     // ---------------- JSON Payload
                     err = rlp_readStringPaging(data, f,
                                                (char *) out, outLen,
                                                &valueLen,
                                                pageIdx, pageCount);
                     break;
-                // TODO: confirm tx types
-                case MANTX_TXTYPE_MINER_REWARD:
-                case MANTX_TXTYPE_CANCEL_AUTH:
-                case MANTX_TXTYPE_CREATE_CURR:
-                case MANTX_TXTYPE_VERIF_REWARD:
-                case MANTX_TXTYPE_INTEREST_REWARD:
-                case MANTX_TXTYPE_TXFEE_REWARD:
-                case MANTX_TXTYPE_LOTTERY_REWARD:
-                case MANTX_TXTYPE_SET_BLACKLIST:
-                case MANTX_TXTYPE_SUPERBLOCK:
-
-
-                case MANTX_TXTYPE_BROADCAST:
                 case MANTX_TXTYPE_REVERT: {
                     // ----------------- HEX payload
                     err = rlp_readStringPaging(data, f,
@@ -285,6 +290,14 @@ int8_t mantx_print(mantx_context_t *ctx,
                     }
                     break;
                 }
+                case MANTX_TXTYPE_BROADCAST:
+                case MANTX_TXTYPE_MINER_REWARD:
+                case MANTX_TXTYPE_VERIF_REWARD:
+                case MANTX_TXTYPE_INTEREST_REWARD:
+                case MANTX_TXTYPE_TXFEE_REWARD:
+                case MANTX_TXTYPE_LOTTERY_REWARD:
+                case MANTX_TXTYPE_SET_BLACKLIST:
+                case MANTX_TXTYPE_SUPERBLOCK:
                 default:
                     err = MANTX_ERROR_INVALID_TXTYPE;
                     break;
