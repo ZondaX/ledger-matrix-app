@@ -43,6 +43,8 @@ uint8_t app_sign() {
 
     uint8_t *der_signature = G_io_apdu_buffer + DER_OFFSET;
 
+    io_seproxyhal_io_heartbeat();
+
     // Generate keys
     cx_ecfp_public_key_t publicKey;
     cx_ecfp_private_key_t privateKey;
@@ -55,12 +57,16 @@ uint8_t app_sign() {
     keysSecp256k1(&publicKey, &privateKey, privateKeyData);
     memset(privateKeyData, 0, 32);
 
+    io_seproxyhal_io_heartbeat();
+
     // Hash
     const uint8_t *message = transaction_get_buffer();
     const uint16_t messageLength = transaction_get_buffer_length();
 
     uint8_t messageDigest[HASH_SIZE];
     keccak(messageDigest, HASH_SIZE, (uint8_t *) message, messageLength);
+
+    io_seproxyhal_io_heartbeat();
 
     // Sign
     unsigned int info = 0;
@@ -74,6 +80,8 @@ uint8_t app_sign() {
                                               &info);
 
     os_memset(&privateKey, 0, sizeof(privateKey));
+
+    io_seproxyhal_io_heartbeat();
 
     // https://github.com/libbitcoin/libbitcoin-system/wiki/ECDSA-and-DER-Signatures#serialised-der-signature-sequence
     // [1 byte]   - DER Prefix

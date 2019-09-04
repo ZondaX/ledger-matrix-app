@@ -36,7 +36,6 @@ void h_address_accept(unsigned int _) {
     app_reply_address();
 
     view_idle_show(0);
-    UX_WAIT();
 }
 
 void h_sign_accept(unsigned int _) {
@@ -44,11 +43,10 @@ void h_sign_accept(unsigned int _) {
 
     const uint8_t replyLen = app_sign();
 
+    view_idle_show(0);
+
     set_code(G_io_apdu_buffer, replyLen, APDU_CODE_OK);
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, replyLen + 2);
-
-    view_idle_show(0);
-    UX_WAIT();
 }
 
 void h_sign_reject(unsigned int _) {
@@ -58,7 +56,6 @@ void h_sign_reject(unsigned int _) {
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
 
     view_idle_show(0);
-    UX_WAIT();
 }
 
 void h_review_init() {
