@@ -122,7 +122,6 @@ void h_review_button_left() {
     } else {
         view_review_show();
     }
-    UX_WAIT();
 }
 
 void h_review_button_right() {
@@ -133,7 +132,6 @@ void h_review_button_right() {
     } else {
         view_review_show();
     }
-    UX_WAIT();
 }
 
 //////////////////////////
