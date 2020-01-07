@@ -1,6 +1,7 @@
 /*******************************************************************************
+*   Ledger App - Bitcoin Wallet
 *   (c) 2019 ZondaX GmbH
-*   (c) 2016 Ledger
+*   (c) 2016-2019 Ledger
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -14,29 +15,24 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 ********************************************************************************/
+
 #pragma once
 
+#include <stdlib.h>
 #include <stdint.h>
 
-#if defined(LEDGER_SPECIFIC)
-#include "bolos_target.h"
-#if defined(BOLOS_SDK)
-#include "os.h"
-#include "cx.h"
-#endif
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-/// view_init (initializes UI)
-void view_init();
+int decode_base58(const char *in, size_t length,
+                  unsigned char *out, size_t *outlen);
 
-/// view_idle_show (idle view - main menu + status)
-void view_idle_show(unsigned int ignored);
+int encode_base58(const unsigned char *in, size_t length,
+                  unsigned char *out, size_t *outlen);
 
-/// view_error (error view)
-void view_error_show();
+char encode_base58_clip(unsigned char v);
 
-// shows address in the screen
-void view_address_show();
-
-// Shows review screen + later sign menu
-void view_sign_show();
+#ifdef __cplusplus
+}
+#endif

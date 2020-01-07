@@ -15,60 +15,177 @@
 ********************************************************************************/
 
 #include "crypto.h"
+#include "coin.h"
+
+#include "utils/base58.h"
+#include "apdu_codes.h"
+#include "zxmacros.h"
+#include "utils/utils.h"
+
+uint32_t bip44Path[BIP44_LEN_DEFAULT];
+
+void keccak(uint8_t *out, size_t out_len, uint8_t *in, size_t in_len);
 
 #if defined(TARGET_NANOS) || defined(TARGET_NANOX)
 #include "cx.h"
-#endif
 
-uint32_t bip44Path[5];
+void crypto_extractPublicKey(uint32_t bip44Path[BIP44_LEN_DEFAULT], uint8_t *pubKey) {
+    cx_ecfp_public_key_t cx_publicKey;
+    cx_ecfp_private_key_t cx_privateKey;
+    uint8_t privateKeyData[32];
 
-// automatically generated LUT
-// from https://github.com/MatrixAINetwork/go-matrix/blob/6b61d8dbb8dfde44e896d359b17377d1a60f44db/crc8/crc8.go#L26
-// no reflect in or out
-const uint8_t crc8_init = 0x00;
-const uint8_t crc8_xor_out = 0x00;
-const uint8_t crc8_check = 0xF4;
-const uint8_t crc8_poly7[] = {
-        0, 7, 14, 9, 28, 27, 18, 21, 56, 63, 54, 49, 36, 35, 42, 45, 112, 119, 126, 121, 108, 107, 98, 101, 72, 79, 70,
-        65, 84, 83, 90, 93, 224, 231, 238, 233, 252, 251, 242, 245, 216, 223, 214, 209, 196, 195, 202, 205, 144, 151,
-        158, 153, 140, 139, 130, 133, 168, 175, 166, 161, 180, 179, 186, 189, 199, 192, 201, 206, 219, 220, 213, 210,
-        255, 248, 241, 246, 227, 228, 237, 234, 183, 176, 185, 190, 171, 172, 165, 162, 143, 136, 129, 134, 147, 148,
-        157, 154, 39, 32, 41, 46, 59, 60, 53, 50, 31, 24, 17, 22, 3, 4, 13, 10, 87, 80, 89, 94, 75, 76, 69, 66, 111,
-        104, 97, 102, 115, 116, 125, 122, 137, 142, 135, 128, 149, 146, 155, 156, 177, 182, 191, 184, 173, 170, 163,
-        164, 249, 254, 247, 240, 229, 226, 235, 236, 193, 198, 207, 200, 221, 218, 211, 212, 105, 110, 103, 96, 117,
-        114, 123, 124, 81, 86, 95, 88, 77, 74, 67, 68, 25, 30, 23, 16, 5, 2, 11, 12, 33, 38, 47, 40, 61, 58, 51, 52, 78,
-        73, 64, 71, 82, 85, 92, 91, 118, 113, 120, 127, 106, 109, 100, 99, 62, 57, 48, 55, 34, 37, 44, 43, 6, 1, 8, 15,
-        26, 29, 20, 19, 174, 169, 160, 167, 178, 181, 188, 187, 150, 145, 152, 159, 138, 141, 132, 131, 222, 217, 208,
-        215, 194, 197, 204, 203, 230, 225, 232, 239, 250, 253, 244, 243};
+    BEGIN_TRY
+    {
+        TRY {
+            // Generate keys
+            os_perso_derive_node_bip32_seed_key(
+                    HDW_NORMAL,
+                    CX_CURVE_256K1,
+                    bip44Path,
+                    BIP44_LEN_DEFAULT,
+                    privateKeyData,
+                    NULL,
+                    NULL,
+                    0);
 
-uint8_t crc8(const uint8_t *data, size_t data_len) {
-    uint8_t crc = crc8_init;
-    for (size_t i = 0; i < data_len; i++) {
-        crc = crc8_poly7[crc ^ data[i]];
+            cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &cx_privateKey);
+            cx_ecfp_init_public_key(CX_CURVE_256K1, NULL, 0, &cx_publicKey);
+            cx_ecfp_generate_pair(CX_CURVE_256K1, &cx_publicKey, &cx_privateKey, 1);
+        }
+        FINALLY {
+            MEMZERO(&cx_privateKey, sizeof(cx_privateKey));
+            MEMZERO(privateKeyData, 32);
+        }
     }
-    return crc ^ crc8_xor_out;
+    END_TRY;
+
+    MEMCPY(pubKey, cx_publicKey.W, 65);
 }
 
-#if defined(TARGET_NANOS) || defined(TARGET_NANOX)
+#define DER_OFFSET 65
+
+uint16_t crypto_sign(uint8_t *signature,
+                     uint16_t signatureMaxlen,
+                     const uint8_t *message,
+                     uint16_t messageLength) {
+
+    if (signatureMaxlen < DER_OFFSET + 80) {
+        return 0;
+    }
+
+    uint8_t messageDigest[CX_SHA256_SIZE];
+    int signatureLength;
+    uint8_t *der_signature = signature + DER_OFFSET;
+
+    // Hash it
+    keccak(messageDigest, sizeof(messageDigest), (uint8_t *) message, messageLength);
+
+    cx_ecfp_private_key_t cx_privateKey;
+    uint8_t privateKeyData[32];
+    BEGIN_TRY
+    {
+        TRY
+        {
+            // Generate keys
+            os_perso_derive_node_bip32_seed_key(
+                    HDW_NORMAL,
+                    CX_CURVE_256K1,
+                    bip44Path,
+                    BIP44_LEN_DEFAULT,
+                    privateKeyData,
+                    NULL,
+                    NULL,
+                    0);
+            cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &cx_privateKey);
+
+            // Sign
+            unsigned int info = 0;
+            signatureLength = cx_eddsa_sign(&cx_privateKey,
+                                            CX_RND_RFC6979 | CX_LAST,
+                                            CX_SHA256,
+                                            messageDigest,
+                                            CX_SHA256_SIZE,
+                                            NULL,
+                                            0,
+                                            der_signature,
+                                            signatureMaxlen - DER_OFFSET,
+                                            &info);
+        #define SIG_V 0
+        #define SIG_R 1
+        #define SIG_S (SIG_R+32)
+
+                // https://github.com/libbitcoin/libbitcoin-system/wiki/ECDSA-and-DER-Signatures#serialised-der-signature-sequence
+            // [1 byte]   - DER Prefix
+            // [1 byte]   - Payload len
+            // [1 byte]   - R Marker. Always 02
+            // [1 byte]   - R Len
+            // [.?. byte] - R
+            // [1 byte]   - S Marker. Always 02
+            // [1 byte]   - S Len
+            // [.?. byte] - S
+            // Prepare response
+            // V [1]
+            // R [32]
+            // S [32]
+
+            uint8_t rOffset = 4;
+            uint8_t rLen = der_signature[3];
+            if (rLen == 33)
+                rOffset++;       // get only 32 bytes
+
+            uint8_t sOffset = rOffset + 2 + 32;
+            uint8_t sLen = der_signature[rOffset + 32];
+            if (sLen == 33)
+                sOffset++;       // get only 32 bytes
+
+            signature[SIG_V] = 27;
+            if (info & CX_ECCINFO_PARITY_ODD) {
+                signature[0]++;
+            }
+            if (info & CX_ECCINFO_xGTn) {
+                signature[0] += 2;
+            }
+
+            os_memmove(signature + SIG_R, der_signature + rOffset, 32);
+            os_memmove(signature + SIG_S, der_signature + sOffset, 32);
+        }
+        FINALLY {
+            MEMZERO(&cx_privateKey, sizeof(cx_privateKey));
+            MEMZERO(privateKeyData, 32);
+        }
+    }
+    END_TRY;
+
+    return DER_OFFSET + signatureLength;
+}
+
 void keccak(uint8_t *out, size_t out_len, uint8_t *in, size_t in_len){
     cx_sha3_t sha3;
     cx_keccak_init(&sha3, 256);
     cx_hash((cx_hash_t*)&sha3, CX_LAST, in, in_len, out, out_len);
 }
 
-void extractPublicKey(uint32_t bip44Path[5], uint8_t *pubKey) {
-    cx_ecfp_public_key_t publicKey;
-    cx_ecfp_private_key_t privateKey;
-    uint8_t privateKeyData[32];
+#else
 
-    os_perso_derive_node_bip32(CX_CURVE_256K1, bip44Path, 5, privateKeyData, 0);
-    cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
-    cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKey, &privateKey, 1);
-    os_memset(&privateKey, 0, sizeof(privateKey));
-    os_memset(privateKeyData, 0, sizeof(privateKeyData));
+#include "mocks/keccak.h"
 
-    MEMCPY(pubKey, publicKey.W, 65);
+void keccak(uint8_t *out, size_t out_len, uint8_t *in, size_t in_len) {
+    keccak_hash(out, out_len, in, in_len, 136, 0x01);
 }
+
+void crypto_extractPublicKey(uint32_t path[BIP44_LEN_DEFAULT], uint8_t *pubKey) {
+    // Empty version for non-Ledger devices
+    MEMZERO(pubKey, 32);
+}
+
+uint16_t crypto_sign(uint8_t *signature,
+                     uint16_t signatureMaxlen,
+                     const uint8_t *message,
+                     uint16_t messageLen) {
+    // Empty version for non-Ledger devices
+    return 0;
+}
+
 #endif
 
 // calculate ethereum address
@@ -98,4 +215,23 @@ uint8_t manAddressFromEthAddr(char *manAddress, uint8_t *ethAddress) {
     // zero terminate and return
     *p = 0;
     return (uint8_t) (p - manAddress);
+}
+
+uint16_t crypto_fillAddress(uint8_t *buffer, uint16_t buffer_len) {
+    if (buffer_len < PK_LEN + 50) {
+        return 0;
+    }
+
+    MEMZERO(buffer, buffer_len);
+
+    // extract pubkey and generate a MAN address
+    char *addr = (char *) (buffer + PK_LEN);
+    crypto_extractPublicKey(bip44Path, buffer);
+
+    // extract pubkey and generate a MAN address
+    uint8_t ethAddress[20];
+    ethAddressFromPubKey(ethAddress, buffer + 1);                   // FIXME: why + 1?
+    uint8_t addrLen = manAddressFromEthAddr(addr, ethAddress);
+
+    return PK_LEN + addrLen;
 }

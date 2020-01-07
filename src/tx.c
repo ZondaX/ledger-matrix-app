@@ -14,16 +14,18 @@
 *  limitations under the License.
 ********************************************************************************/
 
-#include "transaction.h"
+#include "tx.h"
 #include "apdu_codes.h"
 #include "buffering.h"
-#include "mantx.h"
+#include "lib/parser.h"
+#include <string.h>
+#include "zxmacros.h"
 
 #if defined(TARGET_NANOX)
 #define RAM_BUFFER_SIZE 8192
 #define FLASH_BUFFER_SIZE 16384
 #elif defined(TARGET_NANOS)
-#define RAM_BUFFER_SIZE 416
+#define RAM_BUFFER_SIZE 384
 #define FLASH_BUFFER_SIZE 8192
 #endif
 
@@ -44,9 +46,9 @@ storage_t const N_appdata_impl __attribute__ ((aligned(64)));
 #define N_appdata (*(volatile storage_t *)PIC(&N_appdata_impl))
 #endif
 
-mantx_context_t ctx_parsed_tx;
+parser_context_t ctx_parsed_tx;
 
-void transaction_initialize() {
+void tx_initialize() {
     buffering_init(
         ram_buffer,
         sizeof(ram_buffer),
@@ -55,66 +57,68 @@ void transaction_initialize() {
     );
 }
 
-void transaction_reset() {
+void tx_reset() {
     buffering_reset();
 }
 
-uint32_t transaction_append(unsigned char *buffer, uint32_t length) {
+uint32_t tx_append(unsigned char *buffer, uint32_t length) {
     return buffering_append(buffer, length);
 }
 
-uint32_t transaction_get_buffer_length() {
+uint32_t tx_get_buffer_length() {
     return buffering_get_buffer()->pos;
 }
 
-uint8_t *transaction_get_buffer() {
+uint8_t *tx_get_buffer() {
     return buffering_get_buffer()->data;
 }
 
-const char *transaction_parse() {
-    uint8_t err = mantx_parse(
+const char *tx_parse() {
+    uint8_t err = parser_parse(
         &ctx_parsed_tx,
-        transaction_get_buffer(),
-        transaction_get_buffer_length());
+        tx_get_buffer(),
+        tx_get_buffer_length());
 
-    if (err != MANTX_NO_ERROR) {
-        return getError(err);
+    if (err != parser_ok) {
+        return parser_getErrorDescription(err);
+    }
+
+    err = parser_validate(&ctx_parsed_tx);
+    if (err != parser_ok) {
+        return parser_getErrorDescription(err);
     }
 
     return NULL;
 }
 
-uint8_t transaction_getNumItems() {
-    return maxtx_getNumItems(&ctx_parsed_tx);
+uint8_t tx_getNumItems() {
+    return parser_getNumItems(&ctx_parsed_tx);
 }
 
-int8_t transaction_getItem(int8_t displayIdx,
-                           char *outKey, uint16_t outKeyLen,
-                           char *outValue, uint16_t outValueLen,
-                           uint8_t pageIdx, uint8_t *pageCount) {
-    int8_t err = TX_NO_ERROR;
+tx_error_t tx_getItem(int8_t displayIdx,
+                      char *outKey, uint16_t outKeyLen,
+                      char *outVal, uint16_t outValLen,
+                      uint8_t pageIdx, uint8_t *pageCount) {
+    tx_error_t err = tx_no_error;
 
-    err = mantx_getItem(&ctx_parsed_tx,
-                        transaction_get_buffer(),
-                        displayIdx,
-                        outKey, outKeyLen,
-                        outValue, outValueLen,
-                        pageIdx, pageCount);
-
-    if (*pageCount > 1) {
-        // Append
-        uint8_t keyLen = strlen(outKey);
-        if (keyLen < outKeyLen) {
-            snprintf(outKey + keyLen, outKeyLen - keyLen, " [%d/%d]", pageIdx + 1, *pageCount);
-        }
+    if (displayIdx < 0 || displayIdx > tx_getNumItems()) {
+        return tx_no_data;
     }
 
-    // Convert error codes
-    if (err == MANTX_ERROR_UNEXPECTED_DISPLAY_IDX)
-        return TX_NO_MORE_DATA;
+    err = (tx_error_t) parser_getItem(&ctx_parsed_tx,
+                                      displayIdx,
+                                      outKey, outKeyLen,
+                                      outVal, outValLen,
+                                      pageIdx, pageCount);
 
-    if (err == MANTX_NO_ERROR)
-        return TX_NO_ERROR;
+    // Convert error codes
+    if (err == parser_no_data ||
+        err == parser_display_idx_out_of_range ||
+        err == parser_display_page_out_of_range)
+        return tx_no_data;
+
+    if (err == parser_ok)
+        return tx_no_error;
 
     return err;
 }

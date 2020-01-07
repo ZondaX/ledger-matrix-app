@@ -16,19 +16,19 @@
 
 #pragma once
 
-#include <zxmacros.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define UTILS_NOERROR 0
-#define UTILS_NOT_ENOUGH_DATA -1
+#include <zxmacros.h>
+#include <zxtypes.h>
 
-// Converts data bytes into a hexstring !! IN PLACE !!
-uint8_t convertToHexstringInPlace(uint8_t *data, uint16_t dataLen, uint16_t dataLenMax);
+bool_t bignumLittleEndian_bcdprint(char *outBuffer, uint16_t outBufferLen, const uint8_t *inBCD, uint16_t inBCDLen);
+void bignumLittleEndian_to_bcd(uint8_t *bcdOut, uint16_t bcdOutLen, const uint8_t *binValue, uint16_t binValueLen);
 
-void printTime(char *out, uint16_t outLen, uint64_t t);
+bool_t bignumBigEndian_bcdprint(char *outBuffer, uint16_t outBufferLen, const uint8_t *bcdIn, uint16_t bcdInLen);
+void bignumBigEndian_to_bcd(uint8_t *bcdOut, uint16_t bcdOutLen, const uint8_t *binValue, uint16_t binValueLen);
+
 
 #ifdef __cplusplus
 }

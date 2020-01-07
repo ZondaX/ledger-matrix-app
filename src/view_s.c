@@ -23,7 +23,7 @@
 #include "bagl.h"
 #include "zxmacros.h"
 #include "view_templates.h"
-#include "transaction.h"
+#include "tx.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -37,20 +37,31 @@ void view_sign_show_s();
 
 ux_state_t ux;
 
+void os_exit(uint32_t id) {
+    os_sched_exit(0);
+}
+
 const ux_menu_entry_t menu_main[] = {
     {NULL, NULL, 0, &C_icon_app, MENU_MAIN_APP_LINE1, MENU_MAIN_APP_LINE2, 33, 12},
     {NULL, NULL, 0, NULL, "v"APPVERSION, NULL, 0, 0},
-    {NULL, os_sched_exit, 0, &C_icon_dashboard, "Quit", NULL, 50, 29},
+    {NULL, os_exit, 0, &C_icon_dashboard, "Quit", NULL, 50, 29},
     UX_MENU_END
 };
 
-static const bagl_element_t view_address[] = {
-    UI_FillRectangle(0, 0, 0, UI_SCREEN_WIDTH, UI_SCREEN_HEIGHT, 0x000000, 0xFFFFFF),
-    UI_Icon(0, 128 - 7, 0, 7, 7, BAGL_GLYPH_ICON_CHECK),
-    UI_LabelLine(UIID_LABEL + 0, 0, 8, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.key),
-    UI_LabelLine(UIID_LABEL + 0, 0, 19, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value),
-    UI_LabelLineScrolling(UIID_LABELSCROLL, 14, 30, 100, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value2),
-};
+UX_STEP_NOCB_INIT(ux_addr_flow_1_step, paging,
+        { h_addr_update_item(CUR_FLOW.index); },
+        { .title = "Address", .text = viewdata.addr, });
+UX_STEP_NOCB_INIT(ux_addr_flow_2_step, paging,
+        { h_addr_update_item(CUR_FLOW.index); },
+        { .title = "Path", .text = viewdata.addr, });
+UX_STEP_VALID(ux_addr_flow_3_step, pb, h_address_accept(0), { &C_icon_validate_14, "Ok"});
+
+UX_FLOW(
+    ux_addr_flow,
+    &ux_addr_flow_1_step,
+    &ux_addr_flow_2_step,
+    &ux_addr_flow_3_step
+);
 
 void h_review(unsigned int _) { UNUSED(_); view_sign_show_impl(); }
 
@@ -68,13 +79,21 @@ static const bagl_element_t view_review[] = {
     UI_LabelLine(UIID_LABEL + 2, 0, 30, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value2),
 };
 
-static unsigned int view_address_button(unsigned int button_mask, unsigned int button_mask_counter) {
+static const bagl_element_t view_error[] = {
+    UI_FillRectangle(0, 0, 0, UI_SCREEN_WIDTH, UI_SCREEN_HEIGHT, 0x000000, 0xFFFFFF),
+    UI_Icon(0, 128 - 7, 0, 7, 7, BAGL_GLYPH_ICON_CHECK),
+    UI_LabelLine(UIID_LABEL + 0, 0, 8, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.key),
+    UI_LabelLine(UIID_LABEL + 0, 0, 19, UI_SCREEN_WIDTH, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value),
+    UI_LabelLineScrolling(UIID_LABELSCROLL, 0, 30, 128, UI_11PX, UI_WHITE, UI_BLACK, viewdata.value2),
+};
+
+static unsigned int view_error_button(unsigned int button_mask, unsigned int button_mask_counter) {
     switch (button_mask) {
         case BUTTON_EVT_RELEASED | BUTTON_LEFT | BUTTON_RIGHT:
         case BUTTON_EVT_RELEASED | BUTTON_LEFT:
             break;
         case BUTTON_EVT_RELEASED | BUTTON_RIGHT:
-            h_address_accept(0);
+            h_error_accept(0);
             break;
     }
     return 0;
@@ -117,20 +136,50 @@ const bagl_element_t *view_prepro(const bagl_element_t *element) {
 void h_review_button_left() {
     h_review_decrease();
 
-    if (h_review_update_data() == TX_NO_MORE_DATA) {
-        view_sign_show_s();
-    } else {
-        view_review_show();
+    view_error_t err = h_review_update_data();
+    switch(err) {
+        case view_no_error:
+            view_review_show();
+            break;
+        case view_no_data:
+            view_sign_show_s();
+            break;
+        case view_error_detected:
+        default:
+            view_error_show();
+            break;
     }
+
+    UX_WAIT();
 }
 
 void h_review_button_right() {
     h_review_increase();
 
-    if (h_review_update_data() == TX_NO_MORE_DATA) {
-        view_sign_show_s();
-    } else {
-        view_review_show();
+    view_error_t err = h_review_update_data();
+
+    switch(err) {
+        case view_no_error:
+            view_review_show();
+            break;
+        case view_no_data:
+            view_sign_show_s();
+            break;
+        case view_error_detected:
+        default:
+            view_error_show();
+            break;
+    }
+
+    UX_WAIT();
+}
+
+void splitValueField() {
+    print_value2("");
+    uint16_t vlen = strlen(viewdata.value);
+    if (vlen > MAX_CHARS_PER_VALUE2_LINE - 1) {
+        strcpy(viewdata.value2, viewdata.value + MAX_CHARS_PER_VALUE_LINE);
+        viewdata.value[MAX_CHARS_PER_VALUE_LINE] = 0;
     }
 }
 
@@ -145,14 +194,33 @@ void view_idle_show_impl() {
 }
 
 void view_address_show_impl() {
-    UX_DISPLAY(view_address, view_prepro);
+    ux_layout_paging_reset();
+    if(G_ux.stack_count == 0) {
+        ux_stack_push();
+    }
+    ux_flow_init(0, ux_addr_flow, NULL);
+}
+
+void view_error_show_impl() {
+    UX_DISPLAY(view_error, view_prepro);
 }
 
 void view_sign_show_impl() {
     h_review_init();
-    ////
-    h_review_update_data();
-    view_review_show();
+
+    view_error_t err = h_review_update_data();
+    switch(err) {
+        case view_no_error:
+            view_review_show();
+            break;
+        case view_no_data:
+            view_sign_show_s();
+            break;
+        case view_error_detected:
+        default:
+            view_error_show();
+            break;
+    }
 }
 
 void view_sign_show_s(void){

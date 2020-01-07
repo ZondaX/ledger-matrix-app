@@ -1,5 +1,5 @@
 /*******************************************************************************
-*   (c) 2019 ZondaX GmbH
+*  (c) 2019 ZondaX GmbH
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -13,29 +13,23 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 ********************************************************************************/
-
 #pragma once
 
-#include "rlp.h"
+#include <rlp.h>
+#include <coin.h>
+#include <zxtypes.h>
+#include "parser_common.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#include <stdint.h>
+#include <stddef.h>
+
 #define MANTX_ROOTFIELD_COUNT 13
 #define MANTX_EXTRAFIELD_COUNT 3
 #define MANTX_EXTRALISTFIELD_COUNT 10
-
-/////////////// ERRORS
-#define MANTX_NO_ERROR 0
-#define MANTX_ERROR_UNEXPECTED_ROOT -1
-#define MANTX_ERROR_UNEXPECTED_FIELD_COUNT -2
-#define MANTX_ERROR_UNEXPECTED_FIELD -3
-#define MANTX_ERROR_UNEXPECTED_FIELD_TYPE -4
-#define MANTX_ERROR_UNEXPECTED_DISPLAY_IDX -5
-#define MANTX_ERROR_INVALID_TIME -6
-#define MANTX_ERROR_INVALID_TXTYPE -7
-#define MANTX_ERROR_EXTRATO_TOO_MANY -8
 
 /////////////// TX TYPES
 #define MANTX_TXTYPE_NORMAL             0
@@ -85,28 +79,7 @@ typedef struct {
     uint8_t extraTxType;
     uint16_t extraToListCount;
     uint8_t JsonCount;
-} mantx_context_t;
-
-// parse and check a tx buffer
-int8_t mantx_parse(mantx_context_t *ctx, uint8_t *data, uint16_t dataLen);
-
-const char *getError(int8_t errorCode);
-
-uint8_t getDisplayTxExtraType(char *out, uint16_t outLen, uint8_t txtype);
-
-// get a readable output for each field
-int8_t mantx_print(mantx_context_t *ctx, uint8_t *data,
-                              int8_t fieldIdx,
-                              char *out, uint16_t outLen,
-                              uint8_t pageIdx, uint8_t *pageCount);
-
-uint8_t maxtx_getNumItems(mantx_context_t *ctx);
-
-int8_t mantx_getItem(mantx_context_t *ctx, uint8_t *data,
-                     int8_t displayIdx,
-                     char *outKey, uint16_t outKeyLen,
-                     char *outValue, uint16_t outValueLen,
-                     uint8_t pageIdx, uint8_t *pageCount);
+} parser_tx_t;
 
 #ifdef __cplusplus
 }

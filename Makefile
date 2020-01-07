@@ -24,10 +24,11 @@ include $(BOLOS_SDK)/Makefile.defines
 # Main app configuration
 APPNAME = "MAN"
 APPVERSION_M=0
-APPVERSION_N=2
-APPVERSION_P=4
+APPVERSION_N=4
+APPVERSION_P=0
 
-APP_LOAD_PARAMS = --appFlags 0x200 --delete $(COMMON_LOAD_PARAMS) --path "44'/318'"
+APPPATH = "44'/318'"
+APP_LOAD_PARAMS = --appFlags 0x200 --delete $(COMMON_LOAD_PARAMS) --path ${APPPATH}
 
 ifeq ($(TARGET_NAME),TARGET_NANOS)
 SCRIPT_LD:=$(CURDIR)/script.ld
@@ -43,6 +44,17 @@ $(error ICONNAME is not set)
 endif
 
 all: default
+	@echo "#!/usr/bin/env bash" > $(CURDIR)/pkg/zxtool.sh
+	@echo "APPNAME=\"${APPNAME}\"" >> $(CURDIR)/pkg/zxtool.sh
+	@echo "APPVERSION=\"${APPVERSION}\"" >> $(CURDIR)/pkg/zxtool.sh
+	@echo "APPPATH=\""${APPPATH}"\"" >> $(CURDIR)/pkg/zxtool.sh
+	@echo "LOAD_PARAMS=\"${COMMON_LOAD_PARAMS}\"" >> $(CURDIR)/pkg/zxtool.sh
+	@echo "DELETE_PARAMS=\"${COMMON_DELETE_PARAMS}\"" >> $(CURDIR)/pkg/zxtool.sh
+	@echo "APPHEX=\"" >> $(CURDIR)/pkg/zxtool.sh
+	@cat $(CURDIR)/bin/app.hex >> $(CURDIR)/pkg/zxtool.sh
+	@echo "\"" >> $(CURDIR)/pkg/zxtool.sh
+	@cat $(CURDIR)/scripts/template.sh >> $(CURDIR)/pkg/zxtool.sh
+	@chmod +x $(CURDIR)/pkg/zxtool.sh
 
 ############
 # Platform
@@ -64,6 +76,7 @@ DEFINES   += U2F_PROXY_MAGIC=\"MAN\"
 DEFINES   += USB_SEGMENT_SIZE=64
 DEFINES   += U2F_MAX_MESSAGE_SIZE=264 #257+5+2
 DEFINES   += HAVE_BOLOS_APP_STACK_CANARY
+DEFINES   += NDEBUG
 
 WEBUSB_URL     = www.ledgerwallet.com
 DEFINES       += HAVE_WEBUSB WEBUSB_URL_SIZE_B=$(shell echo -n $(WEBUSB_URL) | wc -c) WEBUSB_URL=$(shell echo -n $(WEBUSB_URL) | sed -e "s/./\\\'\0\\\',/g")
@@ -84,7 +97,8 @@ DEFINES          += HAVE_UX_FLOW
 SDK_SOURCE_PATH  += lib_ux
 else
 # Assume Nano S
-DEFINES += IO_SEPROXYHAL_BUFFER_SIZE_B=128
+DEFINES       += IO_SEPROXYHAL_BUFFER_SIZE_B=128
+DEFINES       += HAVE_BOLOS_UX COMPLIANCE_UX_160 HAVE_UX_LEGACY HAVE_UX_FLOW
 endif
 
 # X specific
@@ -129,16 +143,8 @@ include $(BOLOS_SDK)/Makefile.glyphs
 APP_SOURCE_PATH += src deps/ledger-zxlib/include deps/ledger-zxlib/src
 SDK_SOURCE_PATH += lib_stusb lib_u2f lib_stusb_impl
 
-ifeq ($(TARGET_NAME),TARGET_NANOX)
 #SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
 SDK_SOURCE_PATH  += lib_ux
-endif
-
-load:
-	python -m ledgerblue.loadApp $(APP_LOAD_PARAMS)
-
-delete:
-	python -m ledgerblue.deleteApp $(COMMON_DELETE_PARAMS)
 
 # Import generic rules from the SDK
 include $(BOLOS_SDK)/Makefile.rules

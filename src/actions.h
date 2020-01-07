@@ -1,5 +1,4 @@
 /*******************************************************************************
-*   (c) 2016 Ledger
 *   (c) 2019 ZondaX GmbH
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,3 +22,5 @@ uint8_t app_sign();
 uint8_t app_fill_address();
 
 void app_reply_address();
+
+void app_reply_error();

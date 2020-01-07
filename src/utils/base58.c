@@ -148,6 +148,6 @@ int encode_base58(const unsigned char *in, size_t length,
     return 0;
 }
 
-char encode_base58_clip(const unsigned char v) {
+char encode_base58_clip(unsigned char v) {
     return BASE58ALPHABET[v % 58];
 }

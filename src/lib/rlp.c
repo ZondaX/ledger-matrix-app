@@ -15,7 +15,7 @@
 ********************************************************************************/
 
 #include "rlp.h"
-#include "uint256.h"
+#include "utils/uint256.h"
 
 int16_t rlp_decode(
     const uint8_t *data,

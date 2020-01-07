@@ -17,7 +17,7 @@
 #pragma once
 
 #include <zxmacros.h>
-#include "uint256.h"
+#include "utils/uint256.h"
 
 #define RLP_KIND_BYTE       0
 #define RLP_KIND_STRING     1

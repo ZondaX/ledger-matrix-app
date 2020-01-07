@@ -63,22 +63,22 @@ The general structure of commands and responses is as follows:
 
 --------------
 
-### INS_GETADDR_SECP256K1
+### INS_GET_ADDR_SECP256K1
 
 #### Command
 
-| Field      | Type           | Content                | Expected       |
-| ---------- | -------------- | ---------------------- | -------------- |
-| CLA        | byte (1)       | Application Identifier | 0x88           |
-| INS        | byte (1)       | Instruction ID         | 0x01           |
-| P1         | byte (1)       | Request User confirmation | No = 0      |
-| P2         | byte (1)       | Parameter 2            | ignored        |
-| L          | byte (1)       | Bytes in payload       | (depends)      |
-| Path[0]    | byte (4)       | Derivation Path Data   | 44             |
-| Path[1]    | byte (4)       | Derivation Path Data   | 318            |
-| Path[2]    | byte (4)       | Derivation Path Data   | ??             |
-| Path[3]    | byte (4)       | Derivation Path Data   | ??             |
-| Path[4]    | byte (4)       | Derivation Path Data   | ??             |
+| Field      | Type           | Content                | Expected          |
+| ---------- | -------------- | ---------------------- | ----------------- |
+| CLA        | byte (1)       | Application Identifier | 0x88              |
+| INS        | byte (1)       | Instruction ID         | 0x01              |
+| P1         | byte (1)       | Request User confirmation | No = 0         |
+| P2         | byte (1)       | Parameter 2            | ignored           |
+| L          | byte (1)       | Bytes in payload       | (depends)         |
+| Path[0]    | byte (4)       | Derivation Path Data   | 44                |
+| Path[1]    | byte (4)       | Derivation Path Data   | 318               |
+| Path[2]    | byte (4)       | Derivation Path Data   | ??                |
+| Path[3]    | byte (4)       | Derivation Path Data   | ??                |
+| Path[4]    | byte (4)       | Derivation Path Data   | ??                |
 
 #### Response
 
@@ -98,12 +98,13 @@ The general structure of commands and responses is as follows:
 | ----- | -------- | ---------------------- | --------- |
 | CLA   | byte (1) | Application Identifier | 0x88      |
 | INS   | byte (1) | Instruction ID         | 0x02      |
-| P1    | byte (1) | Packet Current Index   |           |
-| P2    | byte (1) | Packet Total Count     |
-|       |
+| P1    | byte (1) | Payload desc           | 0 = init  |
+|       |          |                        | 1 = add   |
+|       |          |                        | 2 = last  |
+| P2    | byte (1) | ----                   | not used  |
 | L     | byte (1) | Bytes in payload       | (depends) |
 
-The first packet/chunk includes parameters
+The first packet/chunk includes only the derivation path
 
 All other packets/chunks should contain message to sign
 
@@ -123,7 +124,7 @@ All other packets/chunks should contain message to sign
 
 | Field   | Type     | Content         | Expected |
 | ------- | -------- | --------------- | -------- |
-| Payload Chunk | bytes... | Payload to Sign |          |
+| Message | bytes... | Message to Sign |          |
 
 #### Response
 

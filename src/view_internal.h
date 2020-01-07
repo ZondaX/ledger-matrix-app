@@ -26,11 +26,12 @@
 #define MENU_MAIN_APP_LINE2 "TEST!!!!"
 #endif
 
+#define CUR_FLOW G_ux.flow_stack[G_ux.stack_count-1]
+
 #if defined(TARGET_NANOX)
 #define MAX_CHARS_PER_KEY_LINE      64
 #define MAX_CHARS_PER_VALUE1_LINE   4096
 #define MAX_CHARS_HEXMESSAGE        160
-#define CUR_FLOW G_ux.flow_stack[G_ux.stack_count-1]
 #else
 #define MAX_CHARS_PER_KEY_LINE      (32+1)
 #define MAX_CHARS_PER_VALUE_LINE    (18)
@@ -38,19 +39,35 @@
 #define MAX_CHARS_PER_VALUE2_LINE   (MAX_CHARS_PER_VALUE_LINE+1)
 #define MAX_CHARS_HEXMESSAGE        40
 #endif
+#define MAX_CHARS_ADDR              (MAX_CHARS_PER_KEY_LINE + MAX_CHARS_PER_VALUE1_LINE)
+
+// This typically will point to G_io_apdu_buffer that is prefilled with the address
 
 typedef struct {
-    char key[MAX_CHARS_PER_KEY_LINE];
-    char value[MAX_CHARS_PER_VALUE1_LINE];
+    union {
+        struct {
+            char key[MAX_CHARS_PER_KEY_LINE];
+            char value[MAX_CHARS_PER_VALUE1_LINE];
 #if defined(TARGET_NANOS)
-    char value2[MAX_CHARS_PER_VALUE2_LINE];
+            char value2[MAX_CHARS_PER_VALUE2_LINE];
 #endif
+        };
+        struct {
+            char addr[MAX_CHARS_ADDR];
+        };
+    };
     int8_t idx;
     int8_t pageIdx;
     uint8_t pageCount;
 } view_t;
 
 extern view_t viewdata;
+
+typedef enum {
+    view_no_error = 0,
+    view_no_data = 1,
+    view_error_detected = 2
+} view_error_t;
 
 #define print_title(...) snprintf(viewdata.title, sizeof(viewdata.title), __VA_ARGS__)
 #define print_key(...) snprintf(viewdata.key, sizeof(viewdata.key), __VA_ARGS__);
@@ -59,6 +76,8 @@ extern view_t viewdata;
 #if defined(TARGET_NANOS)
 #define print_value2(...) snprintf(viewdata.value2, sizeof(viewdata.value2), __VA_ARGS__);
 #endif
+
+void splitValueField();
 
 ///////////////////////////////////////////////
 ///////////////////////////////////////////////
@@ -70,13 +89,27 @@ extern view_t viewdata;
 ///////////////////////////////////////////////
 
 void view_idle_show_impl();
+
 void view_address_show_impl();
+
+void view_error_show_impl();
+
 void view_sign_show_impl();
 
 void h_address_accept(unsigned int _);
+
+void h_error_accept(unsigned int _);
+
 void h_sign_accept(unsigned int _);
+
 void h_sign_reject(unsigned int _);
+
 void h_review_init();
+
 void h_review_increase();
+
 void h_review_decrease();
-int8_t h_review_update_data();
+
+view_error_t h_review_update_data();
+
+view_error_t h_addr_update_item(uint8_t idx);

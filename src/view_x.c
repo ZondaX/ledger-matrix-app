@@ -23,7 +23,7 @@
 #include "bagl.h"
 #include "zxmacros.h"
 #include "view_templates.h"
-#include "transaction.h"
+#include "tx.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -49,15 +49,35 @@ const ux_flow_step_t *const ux_idle_flow [] = {
   FLOW_END_STEP,
 };
 
-UX_STEP_NOCB(ux_addr_flow_1_step, bnnn_paging, { .title = viewdata.key, .text = viewdata.value, });
-UX_STEP_VALID(ux_addr_flow_2_step, pb, h_address_accept(0), { &C_icon_validate_14, "Ok"});
+///////////
+
+UX_STEP_NOCB_INIT(ux_addr_flow_1_step, bnnn_paging,
+        { h_addr_update_item(CUR_FLOW.index); },
+        { .title = "Address", .text = viewdata.addr, });
+UX_STEP_NOCB_INIT(ux_addr_flow_2_step, bnnn_paging,
+        { h_addr_update_item(CUR_FLOW.index); },
+        { .title = "Path", .text = viewdata.addr, });
+UX_STEP_VALID(ux_addr_flow_3_step, pb, h_address_accept(0), { &C_icon_validate_14, "Ok"});
 
 UX_FLOW(
     ux_addr_flow,
     &ux_addr_flow_1_step,
-    &ux_addr_flow_2_step
+    &ux_addr_flow_2_step,
+    &ux_addr_flow_3_step
 );
 
+///////////
+
+UX_STEP_NOCB(ux_error_flow_1_step, bnnn_paging, { .title = viewdata.key, .text = viewdata.value, });
+UX_STEP_VALID(ux_error_flow_2_step, pb, h_error_accept(0), { &C_icon_validate_14, "Ok"});
+
+UX_FLOW(
+    ux_error_flow,
+    &ux_error_flow_1_step,
+    &ux_error_flow_2_step
+);
+
+///////////
 UX_STEP_NOCB(ux_sign_flow_1_step, pbb, { &C_icon_eye, "View", "Transaction" });
 
 UX_STEP_INIT(ux_sign_flow_2_start_step, NULL, NULL, { h_review_loop_start(); });
@@ -97,7 +117,17 @@ void h_review_loop_start() {
         h_review_init();
     }
 
-    h_review_update_data();
+    view_error_t err = h_review_update_data();
+    switch(err) {
+        case view_no_error:
+        case view_no_data:
+            break;
+        case view_error_detected:
+        default:
+            view_error_show();
+            break;
+    }
+
     ux_flow_next();
 }
 
@@ -107,18 +137,38 @@ void h_review_loop_inside() {
 
 void h_review_loop_end() {
     if (flow_inside_loop) {
-    // coming from left
+        // coming from left
         h_review_increase();
-        if (h_review_update_data() == TX_NO_MORE_DATA){
-            flow_inside_loop = 0;
-            ux_flow_next();
-            return;
+        view_error_t err = h_review_update_data();
+
+        switch(err) {
+            case view_no_error:
+                ux_layout_bnnn_paging_reset();
+                break;
+            case view_no_data: {
+                flow_inside_loop = 0;
+                ux_flow_next();
+                return;
+            }
+            case view_error_detected:
+            default:
+                view_error_show();
+                break;
         }
-        ux_layout_bnnn_paging_reset();
     } else {
     // coming from right
         h_review_decrease();
-        h_review_update_data();
+        view_error_t err = h_review_update_data();
+
+        switch(err) {
+            case view_no_error:
+            case view_no_data:
+                break;
+            case view_error_detected:
+            default:
+                view_error_show();
+                break;
+        }
     }
 
     // move to prev flow but trick paging to show first page
@@ -126,6 +176,8 @@ void h_review_loop_end() {
     CUR_FLOW.index--;
     ux_flow_relayout();
 }
+
+void splitValueField() {}
 
 //////////////////////////
 //////////////////////////
@@ -146,6 +198,14 @@ void view_address_show_impl() {
         ux_stack_push();
     }
     ux_flow_init(0, ux_addr_flow, NULL);
+}
+
+void view_error_show_impl() {
+    ux_layout_bnnn_paging_reset();
+    if(G_ux.stack_count == 0) {
+        ux_stack_push();
+    }
+    ux_flow_init(0, ux_error_flow, NULL);
 }
 
 void view_sign_show_impl(){

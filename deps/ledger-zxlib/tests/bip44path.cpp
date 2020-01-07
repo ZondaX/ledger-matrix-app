@@ -1,5 +1,5 @@
 /*******************************************************************************
-*   (c) 2019 ZondaX GmbH
+*   (c) 2018 ZondaX GmbH
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -13,32 +13,34 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 ********************************************************************************/
-
-#pragma once
-
+#include <gmock/gmock.h>
 #include <zxmacros.h>
-#include "coin.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace {
+    TEST(MACROS, bip44path1) {
+        uint32_t path[] = {44, 60, 0, 0, 1};
 
-#define BIP44_LEN_DEFAULT       5u
-#define PK_LEN                  65u
+        char buffer[100];
+        bip44_to_str(buffer, sizeof(buffer), path);
 
-extern uint32_t bip44Path[BIP44_LEN_DEFAULT];
+        EXPECT_EQ("44/60/0/0/1", std::string(buffer));
+    }
 
-uint16_t crypto_fillAddress(uint8_t *buffer, uint16_t buffer_len);
+    TEST(MACROS, bip44path2) {
+        uint32_t path[] = {0x8000002c, 60, 0, 0, 1};
 
-uint16_t crypto_sign(uint8_t *signature,
-                     uint16_t signatureMaxlen,
-                     const uint8_t *message,
-                     uint16_t messageLen);
+        char buffer[100];
+        bip44_to_str(buffer, sizeof(buffer), path);
 
-void ethAddressFromPubKey(uint8_t *ethAddress, uint8_t *pubkey);
+        EXPECT_EQ("44'/60/0/0/1", std::string(buffer));
+    }
 
-uint8_t manAddressFromEthAddr(char *manAddress, uint8_t *ethAddress);
+    TEST(MACROS, bip44path3) {
+        uint32_t path[] = {0x8000002c, 60, 0, 0, 0x80000001};
 
-#ifdef __cplusplus
+        char buffer[100];
+        bip44_to_str(buffer, sizeof(buffer), path);
+
+        EXPECT_EQ("44'/60/0/0/1'", std::string(buffer));
+    }
 }
-#endif
